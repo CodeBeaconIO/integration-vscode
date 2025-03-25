@@ -27,11 +27,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/BitFiddle/code-beacon"
+    "url": "https://github.com/CodeBeaconIO/integration-vscode"
   },
-  "homepage": "https://github.com/BitFiddle/code-beacon/blob/main/README.md",
+  "homepage": "https://github.com/CodeBeaconIO/integration-vscode",
   "bugs": {
-    "url": "https://github.com/BitFiddle/code-beacon/issues"
+    "url": "https://github.com/CodeBeaconIO/integration-vscode/issues"
   },
   "thirdPartyNotices": "THIRD_PARTY_NOTICES.md",
   "activationEvents": [
