@@ -1,0 +1,155 @@
+{
+  "name": "code-beacon",
+  "displayName": "Code Beacon",
+  "publisher": "BitFiddle",
+  "description": "Reveals the execution path of Ruby code runs, helping you understand how your code flows.",
+  "version": "0.1.0",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Debuggers",
+    "Visualization",
+    "Programming Languages"
+  ],
+  "keywords": [
+    "ruby",
+    "debugging",
+    "code flow",
+    "execution path",
+    "visualization"
+  ],
+  "icon": "resources/code-beacon-icon.png",
+  "galleryBanner": {
+    "color": "#C80000",
+    "theme": "dark"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/BitFiddle/code-beacon"
+  },
+  "homepage": "https://github.com/BitFiddle/code-beacon/blob/main/README.md",
+  "bugs": {
+    "url": "https://github.com/BitFiddle/code-beacon/issues"
+  },
+  "thirdPartyNotices": "THIRD_PARTY_NOTICES.md",
+  "activationEvents": [
+    "onView:codeBeacon"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "Code Beacon",
+      "properties": {
+        "code-beacon.dataDir": {
+          "type": "string",
+          "default": ".code-beacon",
+          "description": "Set the root directory name for the data files in the workspace root."
+        },
+        "code-beacon.rootDir": {
+          "type": "string",
+          "default": "",
+          "description": "Used only in the case of a multi-root workspace. Enable a single root directory by setting its path here."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "code-beacon.openFile",
+        "title": "Open File"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "codeBeacon",
+          "title": "Code Beacon",
+          "icon": "resources/code-beacon-icon.png"
+        }
+      ]
+    },
+    "views": {
+      "codeBeacon": [
+        {
+          "id": "appTree",
+          "name": "App Method Calls"
+        },
+        {
+          "id": "recordingsTree",
+          "name": "Recordings"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "recordingsTree",
+        "contents": "Loading...",
+        "when": "codeBeaconContext.welcome == 'workspaceFound'"
+      },
+      {
+        "view": "recordingsTree",
+        "contents": "Open a workspace to activate this extension.",
+        "when": "codeBeaconContext.welcome == 'workspaceNotFound'"
+      },
+      {
+        "view": "recordingsTree",
+        "contents": "Configure the 'code-beacon.rootDir' setting and restart to enable this extension.",
+        "when": "codeBeaconContext.welcome == 'rootNotSet'"
+      },
+      {
+        "view": "recordingsTree",
+        "contents": "Run a trace to activate this extension.",
+        "when": "codeBeaconContext.welcome == 'dbMissing'"
+      },
+      {
+        "view": "appTree",
+        "contents": "Loading...",
+        "when": "codeBeaconContext.welcome == 'workspaceFound'"
+      },
+      {
+        "view": "appTree",
+        "contents": "Open a workspace to activate this extension.",
+        "when": "codeBeaconContext.welcome == 'workspaceNotFound'"
+      },
+      {
+        "view": "appTree",
+        "contents": "Configure the 'code-beacon.rootDir' setting and restart to enable this extension.",
+        "when": "codeBeaconContext.welcome == 'rootNotSet'"
+      },
+      {
+        "view": "appTree",
+        "contents": "Run a trace to activate this extension.",
+        "when": "codeBeaconContext.welcome == 'dbMissing'"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "clean": "rm -rf out",
+    "compile": "npm run clean && tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.8.0",
+    "@types/eslint__js": "^8.42.3",
+    "@types/js-yaml": "^4.0.9",
+    "@types/mocha": "^10.0.6",
+    "@types/node": "18.x",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.1",
+    "@typescript-eslint/parser": "^6.13.1",
+    "@vscode/test-cli": "^0.0.4",
+    "@vscode/test-electron": "^2.3.8",
+    "eslint": "^8.54.0",
+    "typescript": "^5.3.2",
+    "typescript-eslint": "^8.0.1"
+  },
+  "dependencies": {
+    "async-mutex": "^0.5.0",
+    "sqlite3": "^5.1.7"
+  }
+}
