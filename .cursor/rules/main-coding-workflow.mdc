@@ -1,0 +1,43 @@
+---
+description: when any modifications to existing code or new features are requested follow this workflow
+globs: 
+alwaysApply: false
+---
+
+# Workflow to effect code changes
+Output that you have read this and always indicate which step you are performing. Do not make any code changes until indicated to do so.
+1. Review the relevant files
+2. Check for existing test files
+  a. If any of the relevant code does not have unit tests, create tests files, but do not add any tests
+  b. If there are existing test files, determine if they are obviously far out of date
+  c. If either the files didn't exist or if they were wildly out of date, ask if you should proceed or if you should stop and first ensure sufficient coverage for existing code.
+3. When indicated to proceed, determine which primary existing or new libraries you will be working with.
+  a. Determine local docs or online references for each library and review.
+  b. Output the location of the reference and abbreviated documentation of only the expected portions of the API that you will be using.
+3. Run the existing relevant tests
+  a. Ensure they all pass
+4. Now, unless this is a refactor, first add test coverage for the requested changes without any modication to any code yet.
+5. Run the tests
+  a. Ensure all of the new tests fail
+  b. If any pass, then the test code is not testing the correct thing
+    i. iterate the test code until they fail
+6. Now make one small change to the code at a time.
+  a. focus on logical groupings of these new tests or work file by file or class by class or method by method or even a single test
+  b. Implement the code changes or feature to make the first grouping/file/class/method test pass.
+  c. Run the relevant test(s) to make sure the small change had the desired impact.
+  d. If they do not, iterate until they do.
+7. Repeat step 6 for each grouping until all tests pass.
+8. When you are finished applying changes, remind me to commit the changes and output a suggested commit message folling this form:
+```
+“Feat(component): add new component”
+“Fix(api): fix api error”
+“Docs(readme): update readme”
+“Refactor(utils): refactor utils”
+“Style(tailwind): add new tailwind class”
+“Test(unit component): add unit test to component”
+“Chore(deps): update dependencies”
+```
+  a. If warranted (ie there were multiple conceptual changes), then make the commit suggestion multi-line
+    i. To do this, add '...' to the end of the first line
+    ii. Add an empty line spacer
+    iii. List the individual changes made
