@@ -1,7 +1,7 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
-import { Config } from './config';
+import { createConfig } from './config';
 import { AppTreeProvider } from './components/methodDirectory/appTreeProvider';
 import { RecordingsTreeProvider } from './components/recordings/recordingsViewProvider';
 import { Coordinator } from './coordinator';
@@ -11,6 +11,7 @@ import SQLite3Connection from './state/db/sqlite3Connection';
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export async function activate(context: vscode.ExtensionContext) {
+	const config = createConfig();
 	// Event handler for when the codeBeacon viewContainer is revealed
 	// Use the console to output diagnostic information (console.log) and errors (console.error)
 	// This line of code will only be executed once when your extension is activated
@@ -35,7 +36,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		vscode.commands.executeCommand('setContext', 'codeBeaconContext.welcome', 'dbMissing');
 	}
 	
-	const dbManager = new DBManager(Config.refreshPath);
+	const dbManager = new DBManager(config.getRefreshPath());
 	dbManager.startWatching();
 	context.subscriptions.push({
 		dispose: () => {

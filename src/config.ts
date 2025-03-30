@@ -1,32 +1,51 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 
-export class Config {
-  static readonly DB_NAME='codebeacon_tracer.db';
-  static readonly REFRESH_PATH='tmp/refresh';
+export interface IConfig {
+  getDataDir(): string;
+  getDbDir(): string;
+  getDbPath(): string;
+  getRefreshPath(): string;
+  getRootDir(): string;
+  getPathsPath(): string;
+}
 
-  static get dataDir(): string {
-    const dataDir = vscode.workspace.getConfiguration().get('code-beacon.dataDir', '');
-    return path.resolve(Config.rootDir, dataDir);
+export class Config implements IConfig {
+  private readonly dbName = 'codebeacon_tracer.db';
+  private readonly defaultDataDir = '.code-beacon';
+  private readonly refreshPath = 'tmp/refresh';
+  private readonly workspaceConfig: vscode.WorkspaceConfiguration;
+
+  constructor(workspaceConfig: vscode.WorkspaceConfiguration) {
+    this.workspaceConfig = workspaceConfig;
   }
 
-  static get dbDir(): string {
-    return path.resolve(Config.dataDir, 'db');
+  getRootDir(): string {
+    return this.workspaceConfig.get('code-beacon.rootDir', process.cwd());
   }
 
-  static get dbPath(): string {
-    return path.resolve(Config.dataDir, 'db', Config.DB_NAME);
+  getDataDir(): string {
+    const dataDir = this.workspaceConfig.get('code-beacon.dataDir', this.defaultDataDir);
+    return path.resolve(this.getRootDir(), dataDir);
   }
 
-  static get refreshPath(): string {
-    return path.resolve(Config.dataDir, Config.REFRESH_PATH);
+  getDbDir(): string {
+    return path.resolve(this.getDataDir(), 'db');
   }
 
-  public static get rootDir(): string {
-    return vscode.workspace.getConfiguration().get('code-beacon.rootDir', '');
+  getDbPath(): string {
+    return path.resolve(this.getDataDir(), 'db', this.dbName);
   }
 
-  public static get pathsPath(): string {
-    return path.join(Config.dataDir, 'paths.yml');
+  getRefreshPath(): string {
+    return path.resolve(this.getDataDir(), this.refreshPath);
   }
+
+  getPathsPath(): string {
+    return path.join(this.getDataDir(), 'paths.yml');
+  }
+}
+
+export function createConfig(): Config {
+  return new Config(vscode.workspace.getConfiguration());
 }

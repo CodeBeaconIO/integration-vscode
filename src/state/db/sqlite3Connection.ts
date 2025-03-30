@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as vscode from 'vscode';
 import sqlite3 from 'sqlite3';
 import * as path from 'path';
-import { Config } from '../../config';
+import { createConfig } from '../../config';
 
 class MissingDbError extends Error {
   constructor(message: string) {
@@ -28,13 +28,15 @@ class SQLite3Connection {
   
   public static getInstance(): SQLite3Connection {
     if (!SQLite3Connection.instance) {
-      SQLite3Connection.instance = new SQLite3Connection(Config.dbPath);
+      const config = createConfig();
+      SQLite3Connection.instance = new SQLite3Connection(config.getDbPath());
     }
     return SQLite3Connection.instance;
   }
 
   public static connect(dbFileName: string): void {
-    const dbPath = path.resolve(Config.dbDir, dbFileName);
+    const config = createConfig();
+    const dbPath = path.resolve(config.getDbDir(), dbFileName);
     SQLite3Connection.instance = new SQLite3Connection(dbPath);
   }
 
