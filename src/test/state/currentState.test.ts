@@ -1,8 +1,8 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { CurrentState } from '../../../state/currentState';
-import { TreeNodeDataAR } from '../../../state/activeRecord/treeNodeDataAR';
-import { TracedFile } from '../../../components/editor/tracedFile';
+import { CurrentState } from '../../state/currentState';
+import { TreeNodeDataAR } from '../../state/activeRecord/treeNodeDataAR';
+import { TracedFile } from '../../components/editor/tracedFile';
 
 suite('CurrentState Test Suite', () => {
     let mockTreeNode: TreeNodeDataAR;
