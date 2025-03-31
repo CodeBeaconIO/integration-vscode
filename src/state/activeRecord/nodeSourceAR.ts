@@ -28,8 +28,8 @@ export class NodeSourceAR {
     }
   }
 
-  public static reconnectDb(): void {
-    this._db = SQLite3Connection.getDatabase();
+  public static reconnectDb(testDb?: sqlite3.Database): void {
+    this._db = testDb || SQLite3Connection.getDatabase();
   }
 
   public get id(): string {
