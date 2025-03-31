@@ -4,8 +4,8 @@ import SQLite3Connection from '../db/sqlite3Connection';
 import { lineRange } from '../../components/editor/editorUtils';
 import { NodeSourceAR } from './nodeSourceAR';
 
-interface TreeNodeDataARInterface {
-  id: string | undefined,
+export interface TreeNodeDataARInterface {
+  id: string,
   file: string,
   line: string,
   method: string,
@@ -16,7 +16,8 @@ interface TreeNodeDataARInterface {
   block: 0 | 1,
   caller: string,
   return_value: string,
-  script: 0 | 1
+  script: 0 | 1,
+  tp_class_name: string | null
 }
 
 export class TreeNodeDataAR {
@@ -38,7 +39,8 @@ export class TreeNodeDataAR {
     block: 0,
     caller: '',
     return_value: '',
-    script: 0
+    script: 0,
+    tp_class_name: null
   };
 
   constructor(
@@ -61,9 +63,9 @@ export class TreeNodeDataAR {
     }
   }
 
-  public static reconnectDb(): void {
+  public static reconnectDb(testDb?: sqlite3.Database): void {
     this._clearCache();
-    this._db = SQLite3Connection.getDatabase();
+    this._db = testDb || SQLite3Connection.getDatabase();
   }
 
   private static _clearCache(): void {
