@@ -1,7 +1,8 @@
 import sqlite3 from 'sqlite3';
 import path from 'path';
+import SQLite3Connection from '../db/sqlite3Connection';
 
-interface MetaDataARInterface {
+export interface MetaDataARInterface {
   id: string,
   name: string,
   description: string,
@@ -10,8 +11,8 @@ interface MetaDataARInterface {
 }
 
 export class MetaDataAR {
+  private static _db: sqlite3.Database;
   private static _all: Map<string, MetaDataAR> = new Map(); // These are inserted in a particular order (by id)
-  private _db: sqlite3.Database;
   private _row: MetaDataARInterface;
   private dbPath: string;
   private _dbBasename: string;
@@ -21,12 +22,6 @@ export class MetaDataAR {
   ) {
     this.dbPath = dbPath;
     this._dbBasename = path.basename(dbPath);
-    try {
-      this._db = new sqlite3.Database(dbPath);
-    } catch (error) {
-      console.error(`Error opening database ${dbPath}: ${error}`);
-      this._db = new sqlite3.Database(':memory:');
-    }
     this._row = {
       id: '',
       name: '',
@@ -36,21 +31,18 @@ export class MetaDataAR {
     };
   }
 
-  public get db(): sqlite3.Database {
-    return this._db;
+  private static db(): sqlite3.Database {
+    if (MetaDataAR._db) {
+      return this._db;
+    } else {
+      this._db = SQLite3Connection.getDatabase();
+      return this._db;
+    }
   }
-  // private static db(): sqlite3.Database {
-  //   if (MetaDataAR._db) {
-  //     return this._db;
-  //   } else {
-  //     this._db = SQLite3Connection.getDatabase();
-  //     return this._db;
-  //   }
-  // }
 
-  // public static reconnectDb(): void {
-  //   this._db = SQLite3Connection.getDatabase();
-  // }
+  public static reconnectDb(testDb?: sqlite3.Database): void {
+    this._db = testDb || SQLite3Connection.getDatabase();
+  }
 
   public get id(): string {
     return this._row.id;
@@ -75,7 +67,7 @@ export class MetaDataAR {
 
   private _get(query: string): Promise<MetaDataARInterface> {
     return new Promise((resolve, reject) => {
-      this._db.get<MetaDataARInterface>(query, (err: Error | null, row: MetaDataARInterface) => {
+      MetaDataAR.db().get<MetaDataARInterface>(query, (err: Error | null, row: MetaDataARInterface) => {
         if (err) {
           console.error('Error fetching metadata from the database: ' + err.message);
           reject(err);
