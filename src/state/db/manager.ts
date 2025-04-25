@@ -10,8 +10,16 @@ export class DBManager {
 
   constructor(refreshPath: string) {
     this._refreshPath = refreshPath;
-    this._refreshWatcher = vscode.workspace.createFileSystemWatcher(this._refreshPath);
-    this.registerCommandHandlers();
+    const pattern = new vscode.RelativePattern(
+      vscode.Uri.file(this._refreshPath),
+      '*'
+    );
+    this._refreshWatcher = vscode.workspace.createFileSystemWatcher(
+      pattern,
+      false, // [Don't] ignore create events
+      false, // [Don't] ignore change events
+      true   // Do ignore delete events
+    );
   }
 
   public get watcher(): vscode.FileSystemWatcher {
@@ -27,8 +35,8 @@ export class DBManager {
 
   public startWatching(): void {
     this.registerDbEvents();
-    this.onUpdate(() => {
-			newDbEventEmitter.fire();
+    this.onUpdate((uri: vscode.Uri) => {
+			newDbEventEmitter.fire({uri: uri});
 		});
   }
 
@@ -46,7 +54,6 @@ export class DBManager {
   }
 
   private registerDbEvents() {
-
     newDbInstanceEventEmitter.event(() => {
       TreeNodeDataAR.reconnectDb();
       NodeSourceAR.reconnectDb();

@@ -37,6 +37,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	}
 	
 	const dbManager = new DBManager(config.getRefreshPath());
+	dbManager.registerCommandHandlers();
 	dbManager.startWatching();
 	context.subscriptions.push({
 		dispose: () => {
