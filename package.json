@@ -51,6 +51,11 @@
           "type": "string",
           "default": "",
           "description": "Used only in the case of a multi-root workspace. Enable a single root directory by setting its path here."
+        },
+        "code-beacon.sqliteBinaryPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the SQLite binary executable. Required for database operations."
         }
       }
     },
@@ -103,6 +108,11 @@
         "when": "codeBeaconContext.welcome == 'dbMissing'"
       },
       {
+        "view": "recordingsTree",
+        "contents": "SQLite binary path is not configured. Please set the 'code-beacon.sqliteBinaryPath' setting. If you configure this directly in the settings, you will need to reload VS Code for changes to take effect.",
+        "when": "codeBeaconContext.welcome == 'sqlitePathNotSet'"
+      },
+      {
         "view": "appTree",
         "contents": "Loading...",
         "when": "codeBeaconContext.welcome == 'workspaceFound'"
@@ -121,6 +131,11 @@
         "view": "appTree",
         "contents": "Run a trace to activate this extension.",
         "when": "codeBeaconContext.welcome == 'dbMissing'"
+      },
+      {
+        "view": "appTree",
+        "contents": "SQLite binary path is not configured. Please set the 'code-beacon.sqliteBinaryPath' setting. If you configure this directly in the settings, you will need to reload VS Code for changes to take effect.",
+        "when": "codeBeaconContext.welcome == 'sqlitePathNotSet'"
       }
     ]
   },

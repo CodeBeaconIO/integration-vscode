@@ -8,6 +8,7 @@ export interface IConfig {
   getRefreshPath(): string;
   getRootDir(): string;
   getPathsPath(): string;
+  getSqliteBinaryPath(): string;
 }
 
 export class Config implements IConfig {
@@ -43,6 +44,10 @@ export class Config implements IConfig {
 
   getPathsPath(): string {
     return path.join(this.getDataDir(), 'paths.yml');
+  }
+
+  getSqliteBinaryPath(): string {
+    return this.workspaceConfig.get('code-beacon.sqliteBinaryPath', '');
   }
 }
 

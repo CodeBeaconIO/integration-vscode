@@ -7,6 +7,7 @@ import { RecordingsTreeProvider } from './components/recordings/recordingsViewPr
 import { Coordinator } from './coordinator';
 import { DBManager } from './state/db/manager';
 import SQLite3Connection from './state/db/sqlite3Connection';
+import { SqliteSetupService } from './services/sqlite/sqliteSetupService';
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -20,22 +21,23 @@ export async function activate(context: vscode.ExtensionContext) {
 	}
 	 
 	vscode.commands.executeCommand('setContext', 'codeBeaconContext.welcome', 'workspaceFound');
-
-	// const dataPath = '/tmp/call_trace.json';
-	const recordingsDataProvider = new RecordingsTreeProvider();
-	vscode.window.registerTreeDataProvider('recordingsTree', recordingsDataProvider);
-	const appDataProvider = new AppTreeProvider();
-	vscode.window.registerTreeDataProvider('appTree', appDataProvider);
-
-	const coordinator = new Coordinator(recordingsDataProvider);
-	coordinator.initialize();
+	
+	// Check SQLite binary path before proceeding with activation
+	const sqliteSetupService = new SqliteSetupService();
+	if (!(await sqliteSetupService.ensureSetup())) {
+		// If SQLite path is not set, keep the welcome view showing the need for SQLite configuration
+		// and don't proceed with full activation
+		return;
+	}
 	
 	try {
 		SQLite3Connection.getDatabase();
 	} catch (error) {
 		vscode.commands.executeCommand('setContext', 'codeBeaconContext.welcome', 'dbMissing');
+		return; // Don't proceed with activation if database can't be accessed
 	}
 	
+	// Only proceed with full activation if SQLite path is set and database can be accessed
 	const dbManager = new DBManager(config.getRefreshPath());
 	dbManager.registerCommandHandlers();
 	dbManager.startWatching();
@@ -44,6 +46,14 @@ export async function activate(context: vscode.ExtensionContext) {
 			dbManager.stopWatching();
 		}
 	});
+	// const dataPath = '/tmp/call_trace.json';
+	const recordingsDataProvider = new RecordingsTreeProvider();
+	vscode.window.registerTreeDataProvider('recordingsTree', recordingsDataProvider);
+	const appDataProvider = new AppTreeProvider();
+	vscode.window.registerTreeDataProvider('appTree', appDataProvider);
+
+	const coordinator = new Coordinator(recordingsDataProvider);
+	coordinator.initialize();
 }
 
 function workspaceExists(): boolean {
