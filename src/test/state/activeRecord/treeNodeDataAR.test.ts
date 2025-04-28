@@ -1,8 +1,7 @@
 import * as assert from 'assert';
 import { TreeNodeDataAR, TreeNodeDataARInterface } from '../../../state/activeRecord/treeNodeDataAR';
-import * as sqlite3 from 'sqlite3';
-import * as path from 'path';
-import * as fs from 'fs';
+import { NodeSQLiteExecutor } from '../../../services/sqlite/NodeSQLiteExecutor';
+import { SQLiteExecutor } from '../../../services/sqlite/SQLiteExecutor';
 
 suite('TreeNodeDataAR Test Suite', () => {
     const createMockNodeData = (): TreeNodeDataARInterface => {
@@ -42,87 +41,60 @@ suite('TreeNodeDataAR Test Suite', () => {
     };
 
     let treeNode: TreeNodeDataAR;
-    let testDb: sqlite3.Database;
-    const testDbPath = path.join(__dirname, '../../../../.code-beacon/db/test.db');
+    let testExecutor: SQLiteExecutor;
 
     async function insertTestData(data: TreeNodeDataARInterface): Promise<void> {
-        await new Promise<void>((resolve, reject) => {
-            testDb.run(`
-                INSERT OR REPLACE INTO treenodes 
-                (id, file, line, method, depth, gemEntry, isDepthTruncated, parent_id, block, caller, return_value, script, tp_class_name)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `, [
-                data.id,
-                data.file,
-                data.line,
-                data.method,
-                data.depth,
-                data.gemEntry,
-                data.isDepthTruncated,
-                data.parent_id,
-                data.block,
-                data.caller,
-                data.return_value,
-                data.script,
-                data.tp_class_name
-            ], (err) => {
-                if (err) reject(err);
-                resolve();
-            });
-        });
+        await testExecutor.run(`
+            INSERT OR REPLACE INTO treenodes 
+            (id, file, line, method, depth, gemEntry, isDepthTruncated, parent_id, block, caller, return_value, script, tp_class_name)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+            data.id,
+            data.file,
+            data.line,
+            data.method,
+            data.depth,
+            data.gemEntry,
+            data.isDepthTruncated,
+            data.parent_id,
+            data.block,
+            data.caller,
+            data.return_value,
+            data.script,
+            data.tp_class_name
+        ]);
     }
 
     setup(async () => {
-        // Ensure the directory exists
-        const dbDir = path.dirname(testDbPath);
-        if (!fs.existsSync(dbDir)) {
-            fs.mkdirSync(dbDir, { recursive: true });
-        }
-
-        // Create test database
-        testDb = new sqlite3.Database(testDbPath);
+        // Create in-memory database for testing
+        testExecutor = new NodeSQLiteExecutor(':memory:');
         
         // Create test table
-        await new Promise<void>((resolve, reject) => {
-            testDb.run(`
-                CREATE TABLE IF NOT EXISTS treenodes (
-                    id TEXT PRIMARY KEY,
-                    file TEXT,
-                    line TEXT,
-                    method TEXT,
-                    depth INTEGER,
-                    gemEntry INTEGER,
-                    isDepthTruncated INTEGER,
-                    parent_id TEXT,
-                    block INTEGER,
-                    caller TEXT,
-                    return_value TEXT,
-                    script INTEGER,
-                    tp_class_name TEXT
-                )
-            `, (err) => {
-                if (err) reject(err);
-                resolve();
-            });
-        });
+        await testExecutor.exec(`
+            CREATE TABLE IF NOT EXISTS treenodes (
+                id TEXT PRIMARY KEY,
+                file TEXT,
+                line TEXT,
+                method TEXT,
+                depth INTEGER,
+                gemEntry INTEGER,
+                isDepthTruncated INTEGER,
+                parent_id TEXT,
+                block INTEGER,
+                caller TEXT,
+                return_value TEXT,
+                script INTEGER,
+                tp_class_name TEXT
+            )
+        `);
 
-        TreeNodeDataAR.reconnectDb(testDb);
+        TreeNodeDataAR.reconnectDb(testExecutor);
     });
 
     teardown(async () => {
         // Close the database connection
-        if (testDb) {
-            await new Promise<void>((resolve, reject) => {
-                testDb.close((err) => {
-                    if (err) reject(err);
-                    resolve();
-                });
-            });
-        }
-
-        // Delete the test database file
-        if (fs.existsSync(testDbPath)) {
-            fs.unlinkSync(testDbPath);
+        if (testExecutor) {
+            await testExecutor.close();
         }
     });
 

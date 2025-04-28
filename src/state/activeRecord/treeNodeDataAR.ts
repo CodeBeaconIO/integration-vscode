@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import sqlite3 from 'sqlite3';
-import SQLite3Connection from '../db/sqlite3Connection';
+import { SQLiteConnection } from '../db/sqliteConnection';
+import { SQLiteExecutor } from '../../services/sqlite/SQLiteExecutor';
 import { lineRange } from '../../components/editor/editorUtils';
 import { NodeSourceAR } from './nodeSourceAR';
 
@@ -21,7 +21,7 @@ export interface TreeNodeDataARInterface {
 }
 
 export class TreeNodeDataAR {
-  private static _db: sqlite3.Database;
+  private static _executor: SQLiteExecutor;
   private row: TreeNodeDataARInterface;
   private sourceName: string | null = null;
   private _callerLine: number | null = null;
@@ -54,18 +54,18 @@ export class TreeNodeDataAR {
     return new TreeNodeDataAR(TreeNodeDataAR._nullObject);
   }
 
-  private static db(): sqlite3.Database {
-    if (TreeNodeDataAR._db) {
-      return this._db;
+  private static executor(): SQLiteExecutor {
+    if (TreeNodeDataAR._executor) {
+      return this._executor;
     } else {
-      this._db = SQLite3Connection.getDatabase();
-      return this._db;
+      this._executor = SQLiteConnection.getExecutor();
+      return this._executor;
     }
   }
 
-  public static reconnectDb(testDb?: sqlite3.Database): void {
+  public static reconnectDb(testExecutor?: SQLiteExecutor): void {
     this._clearCache();
-    this._db = testDb || SQLite3Connection.getDatabase();
+    this._executor = testExecutor || SQLiteConnection.getExecutor();
   }
 
   private static _clearCache(): void {
@@ -193,184 +193,143 @@ export class TreeNodeDataAR {
     if (this._findByIdCache.has(id.toString())) {
       return this._findByIdCache.get(id.toString())!;
     } else {
-      const query = `SELECT * FROM treenodes WHERE id = '${id}'`;
-      return TreeNodeDataAR._get(query);
+      const query = `SELECT * FROM treenodes WHERE id = ?`;
+      return TreeNodeDataAR._get(query, [id.toString()]);
     }
   }
 
   static findByFileAndLine(file: string, line: number): Promise<TreeNodeDataAR | null> {
     const query = `SELECT * FROM treenodes
-      WHERE file = '${file}'
-      AND line = '${line}'
+      WHERE file = ?
+      AND line = ?
       LIMIT 1`;
-    return TreeNodeDataAR._get(query);
+    return TreeNodeDataAR._get(query, [file, line.toString()]);
   }
 
-  private static _get(query: string): Promise<TreeNodeDataAR | null> {
-    return new Promise((resolve) => {
-      TreeNodeDataAR.db().get<TreeNodeDataARInterface>(query, (err: Error | null, row: TreeNodeDataARInterface) => {
-        if (err) {
-          vscode.window.showErrorMessage('Error fetching node from the database: ' + err.message);
-          resolve(null);
-        }
-        if (row) {
-          resolve(new TreeNodeDataAR(row));
-        } else {
-          resolve(null);
-        }
-      });
-    });
+  private static async _get(query: string, params: (string | number | boolean | null)[] = []): Promise<TreeNodeDataAR | null> {
+    try {
+      const row = await TreeNodeDataAR.executor().get<TreeNodeDataARInterface>(query, params);
+      if (row) {
+        return new TreeNodeDataAR(row);
+      } 
+      return null;
+    } catch (err) {
+      vscode.window.showErrorMessage('Error fetching node from the database: ' + (err as Error).message);
+      return null;
+    }
   }
 
-  private static _query(query: string): Promise<Record<string, unknown> | null> {
-    return new Promise((resolve) => {
-      TreeNodeDataAR.db().get<TreeNodeDataARInterface>(query, (err: Error | null, row: Record<string, unknown>) => {
-        if (err) {
-          vscode.window.showErrorMessage('Error fetching query from the database: ' + err.message);
-          resolve(null);
-        }
-        resolve(row);
-      });
-    });
+  private static async _query(query: string, params: (string | number | boolean | null)[] = []): Promise<Record<string, unknown> | null> {
+    try {
+      const row = await TreeNodeDataAR.executor().get<Record<string, unknown>>(query, params);
+      return row || null;
+    } catch (err) {
+      vscode.window.showErrorMessage('Error fetching query from the database: ' + (err as Error).message);
+      return null;
+    }
   }
 
-  public hasChildren(): Promise<boolean> {
+  public async hasChildren(): Promise<boolean> {
     let query: string;
+    let params: (string | number | boolean | null)[] = [];
+    
     if (this.getId()) {
-      query = `SELECT COUNT(*) as count FROM treenodes WHERE parent_id = '${this.getId()}'`;
+      query = `SELECT COUNT(*) as count FROM treenodes WHERE parent_id = ?`;
+      params = [this.getId() as string];
     } else {
       query = `SELECT COUNT(*) as count FROM treenodes WHERE parent_id IS NULL`;
     }
-    return TreeNodeDataAR._query(query).then((result) => {
-      return result !== null && (result.count as number) > 0;
-    });
+    
+    const result = await TreeNodeDataAR._query(query, params);
+    return result !== null && (result.count as number) > 0;
   }
 
   static async findAllChildren(parentId: string | null): Promise<TreeNodeDataAR[]> {
     if (this._findAllChildrenCache.has(parentId)) {
       return this._findAllChildrenCache.get(parentId)!;
-    } else {
-      let query: string;
-      if (parentId) {
-        query = `SELECT isDepthTruncated, gemEntry, block, file, id, depth, parent_id, method, line, caller, return_value, script FROM treenodes WHERE parent_id = '${parentId}'`;
-      } else {
-        query = `SELECT isDepthTruncated, gemEntry, block, file, id, depth, parent_id, method, line, caller, return_value, script FROM treenodes WHERE parent_id IS NULL`;
-      }
-      return this._each(query);
     }
+    
+    let query: string;
+    let params: (string | number | boolean | null)[] = [];
+    
+    if (parentId) {
+      query = `SELECT isDepthTruncated, gemEntry, block, file, id, depth, parent_id, method, line, caller, return_value, script FROM treenodes WHERE parent_id = ? ORDER BY id`;
+      params = [parentId];
+    } else {
+      query = `SELECT isDepthTruncated, gemEntry, block, file, id, depth, parent_id, method, line, caller, return_value, script FROM treenodes WHERE parent_id IS NULL ORDER BY id`;
+    }
+    
+    return this._each(query, params);
   }
 
   static findAllNodesByFile(file: string): Promise<TreeNodeDataAR[]> {
-    const query = `SELECT * FROM treenodes WHERE file = '${file}'`;
-    return this._each(query);
+    const query = `SELECT * FROM treenodes WHERE file = ? ORDER BY id`;
+    return this._each(query, [file]);
   }
-  
+
   static findAllCallsFromFile(file: string): Promise<TreeNodeDataAR[]> {
-    const query =
-      `SELECT * FROM treenodes WHERE parent_id IN (SELECT id FROM treenodes WHERE file = '${file}')`;
-    return this._each(query);
+    const query = `SELECT * FROM treenodes WHERE parent_id IN (SELECT id FROM treenodes WHERE file = ?)`;
+    return this._each(query, [file]);
   }
 
-  private static _each(query: string): Promise<TreeNodeDataAR[]> {
-    return new Promise((resolve) => {
-      const children: TreeNodeDataAR[] = [];
-
-      TreeNodeDataAR.db().all<TreeNodeDataARInterface>(query,
-        (err: Error | null, rows) => {
-          if (err) {
-            vscode.window.showErrorMessage('Error fetching app nodes from the database: ' + err.message);
-            resolve([]);
-          }
-          rows.forEach((row) => {
-            children.push(new TreeNodeDataAR(row));
-          });
-
-          resolve(children);
-        }
-      );
-    });
+  private static async _each(query: string, params: (string | number | boolean | null)[] = []): Promise<TreeNodeDataAR[]> {
+    try {
+      const rows = await TreeNodeDataAR.executor().all<TreeNodeDataARInterface>(query, params);
+      return rows.map(row => new TreeNodeDataAR(row));
+    } catch (err) {
+      vscode.window.showErrorMessage('Error fetching nodes from the database: ' + (err as Error).message);
+      return [];
+    }
   }
 
-  // TODO put this in the parent class when we have one
-  public static _all(query: string): Promise<Record<string, unknown>[]> {
-    return new Promise((resolve) => {
-      TreeNodeDataAR.db().all(query, 
-          (err: Error | null, rows: Record<string, unknown>[]) => {
-              if (err) {
-                vscode.window.showErrorMessage('Error fetching nodes by file from the database: ' + err.message);
-                resolve([]);
-              }
-              resolve(rows);
-          }
-      );
-    });
+  public static async _all(query: string, params: (string | number | boolean | null)[] = []): Promise<Record<string, unknown>[]> {
+    try {
+      return await TreeNodeDataAR.executor().all<Record<string, unknown>>(query, params);
+    } catch (err) {
+      vscode.window.showErrorMessage('Error fetching records from the database: ' + (err as Error).message);
+      return [];
+    }
   }
 
   public static async findAllLinesExecutedByFile(path: string): Promise<number[]> {
-    const query = `
-      SELECT DISTINCT line
-      FROM treenodes
-      WHERE file = '${path}'
-    `;
-    const rowsMethods = await this._all(query);
-    const linesExecuted: number[] = rowsMethods.map((row) => parseInt(row.line as string, 10));
-    return linesExecuted;
-  }
-
-  public static findAllMethodCountByClass(condition: string): Promise<{ file: string, className: string }[]> {
-    const query = `SELECT file, tp_class_name as class_name FROM treenodes WHERE ${condition} AND (block = 0 OR (block = 1 AND (method IS NULL OR method = ''))) GROUP BY class_name, file ORDER BY class_name, file`;
-    return new Promise((resolve) => {
-      const classes: { file: string, className: string}[] = [];
-      TreeNodeDataAR.db().all(query, (err: Error | null, rows: {file: string, class_name: string}[]) => {
-          if (err) {
-            vscode.window.showErrorMessage('Error fetching files from the database: ' + err.message);
-            resolve([]);
-          }
-          rows.forEach((row) => {
-            classes.push({file: row.file, className: row.class_name});
-          });
-
-          resolve(classes);
-        }
-      );
+    const nodes = await this.findAllNodesByFile(path);
+    const lines = new Set<number>();
+    nodes.forEach((node) => {
+      node.getAllLines().forEach((line) => {
+        lines.add(line);
+      });
     });
+    return Array.from(lines);
   }
 
-  public static findAllMethodCountByFile(condition: string): Promise<{ file: string, methodCount: number }[]> {
-    const query = `SELECT file, block, method, count(*) as method_count
+  public static async findAllMethodCountByClass(condition: string): Promise<{ file: string, className: string }[]> {
+    const query = `SELECT file, tp_class_name as className FROM treenodes WHERE ${condition} AND (block = 0 OR (block = 1 AND (method IS NULL OR method = ''))) GROUP BY className, file ORDER BY className, file`;
+    const results = await this._all(query);
+    return results.map(row => ({
+      file: row.file as string,
+      className: row.className as string
+    }));
+  }
+
+  public static async findAllMethodCountByFile(condition: string): Promise<{ file: string, methodCount: number }[]> {
+    const query = `SELECT file, count(*) as methodCount
                    FROM treenodes
                    WHERE ${condition}
                      AND (block = 0 OR (block = 1
                      AND (method IS NULL OR method = '')))
                    GROUP BY file ORDER BY file`;
-    return new Promise((resolve) => {
-      const files: { file: string, methodCount: number }[] = [];
-      TreeNodeDataAR.db().all(query, (err: Error | null, rows: {file: string, method_count: number}[]) => {
-          if (err) {
-            vscode.window.showErrorMessage('Error fetching files from the database: ' + err.message);
-            resolve([]);
-          }
-          rows.forEach((row) => {
-            files.push({file: row.file, methodCount: row.method_count});
-          });
-
-          resolve(files);
-        }
-      );
+    const rows = await this._all(query);
+    return rows.map((row) => {
+      return {
+        file: row.file as string,
+        methodCount: row.methodCount as number
+      };
     });
   }
 
-  public static findAllFiles(): Promise<string[]> {
-    const query = `SELECT DISTINCT(file) FROM treenodes`;
-    return new Promise((resolve) => {
-      TreeNodeDataAR.db().all(query, (err: Error | null, rows: {file: string}[]) => {
-          if (err) {
-            vscode.window.showErrorMessage('Error fetching files from the database: ' + err.message);
-            resolve([]);
-          }
-          resolve(rows.map((row) => row.file));
-        }
-      );
-    });
+  public static async findAllFiles(): Promise<string[]> {
+    const query = `SELECT DISTINCT file FROM treenodes ORDER BY file`;
+    const rows = await this._all(query);
+    return rows.map((row) => row.file as string);
   }
 }
