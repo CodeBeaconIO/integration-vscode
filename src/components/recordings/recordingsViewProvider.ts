@@ -4,7 +4,7 @@ import { DbNode, DbErrorNode } from './dbNode';
 import { newDbEventEmitter } from '../../eventEmitter';
 import path from 'path';
 import { MetaDataAR } from '../../state/activeRecord/metaDataAR';
-import sqlite3 from 'sqlite3';
+import { SQLiteExecutorFactory } from '../../services/sqlite/SQLiteExecutorFactory';
 
 export class RecordingsTreeProvider implements vscode.TreeDataProvider<string> {
   private _onDidChangeTreeData: vscode.EventEmitter<string | undefined | null | void> = new vscode.EventEmitter<string | undefined | null | void>();
@@ -20,14 +20,14 @@ export class RecordingsTreeProvider implements vscode.TreeDataProvider<string> {
   }
 
   getTreeItem(dbPath: string): Thenable<vscode.TreeItem> {
-    const testDb = new sqlite3.Database(dbPath);
-    MetaDataAR.reconnectDb(testDb);
+    const executor = SQLiteExecutorFactory.createExecutor(dbPath);
+    MetaDataAR.reconnectDb(executor);
     const metaData = new MetaDataAR(dbPath);
     return metaData.findById(1).then((row) => {
-      testDb.close();
+      executor.close();
       return new DbNode(row.name, row.description, row.dbBasename);
     }).catch(() => {
-      testDb.close();
+      executor.close();
       const baseName = path.basename(dbPath);
       return new DbErrorNode(baseName, dbPath);
     });

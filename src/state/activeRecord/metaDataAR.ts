@@ -1,6 +1,6 @@
-import sqlite3 from 'sqlite3';
 import path from 'path';
-import SQLite3Connection from '../db/sqlite3Connection';
+import { SQLiteConnection } from '../db/sqliteConnection';
+import { SQLiteExecutor } from '../../services/sqlite/SQLiteExecutor';
 
 export interface MetaDataARInterface {
   id: string,
@@ -11,7 +11,7 @@ export interface MetaDataARInterface {
 }
 
 export class MetaDataAR {
-  private static _db: sqlite3.Database;
+  private static _executor: SQLiteExecutor;
   private static _all: Map<string, MetaDataAR> = new Map(); // These are inserted in a particular order (by id)
   private _row: MetaDataARInterface;
   private dbPath: string;
@@ -31,17 +31,17 @@ export class MetaDataAR {
     };
   }
 
-  private static db(): sqlite3.Database {
-    if (MetaDataAR._db) {
-      return this._db;
+  private static executor(): SQLiteExecutor {
+    if (MetaDataAR._executor) {
+      return this._executor;
     } else {
-      this._db = SQLite3Connection.getDatabase();
-      return this._db;
+      this._executor = SQLiteConnection.getExecutor();
+      return this._executor;
     }
   }
 
-  public static reconnectDb(testDb?: sqlite3.Database): void {
-    this._db = testDb || SQLite3Connection.getDatabase();
+  public static reconnectDb(testExecutor?: SQLiteExecutor): void {
+    this._executor = testExecutor || SQLiteConnection.getExecutor();
   }
 
   public get id(): string {
@@ -60,26 +60,30 @@ export class MetaDataAR {
     return this._dbBasename;
   }
 
-  public findById(id: number): Promise<MetaDataARInterface> {
-    const query = `SELECT * FROM metadata WHERE id = '${id}'`;
-    return this._get(query);
+  public async findById(id: string | number): Promise<MetaDataARInterface> {
+    const query = `SELECT * FROM metadata WHERE id = ?`;
+    return this._get(query, [id.toString()]);
   }
 
-  private _get(query: string): Promise<MetaDataARInterface> {
-    return new Promise((resolve, reject) => {
-      MetaDataAR.db().get<MetaDataARInterface>(query, (err: Error | null, row: MetaDataARInterface) => {
-        if (err) {
-          console.error('Error fetching metadata from the database: ' + err.message);
-          reject(err);
-        }
-        if (row) {
-          row.dbPath = this.dbPath;
-          row.dbBasename = this._dbBasename;
-          resolve(row);
-        } else {
-          reject(null);
-        }
-      });
-    });
+  private async _get(query: string, params: (string | number | boolean | null)[] = []): Promise<MetaDataARInterface> {
+    try {
+      const row = await MetaDataAR.executor().get<Omit<MetaDataARInterface, 'dbPath' | 'dbBasename'>>(query, params);
+      if (row) {
+        return {
+          ...row,
+          dbPath: this.dbPath,
+          dbBasename: this._dbBasename
+        };
+      } else {
+        throw null;
+      }
+    } catch (err) {
+      if (err instanceof Error) {
+        console.error('Error fetching metadata from the database: ' + err.message);
+        throw err;
+      } else {
+        throw null;
+      }
+    }
   }
 }
