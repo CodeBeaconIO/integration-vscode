@@ -1,9 +1,9 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { NodeSourceAR } from '../../../state/activeRecord/nodeSourceAR';
-import * as sqlite3 from 'sqlite3';
 import * as path from 'path';
 import * as fs from 'fs';
+import { NodeSQLiteExecutor } from '../../../services/sqlite/NodeSQLiteExecutor';
 
 suite('NodeSourceAR Test Suite', () => {
     const createMockNodeSourceData = () => {
@@ -15,26 +15,21 @@ suite('NodeSourceAR Test Suite', () => {
     };
 
     let nodeSource: NodeSourceAR;
-    let testDb: sqlite3.Database;
+    let testExecutor: NodeSQLiteExecutor;
     const testDbDir = path.join(__dirname, '../../../../.code-beacon/db');
     const testDbName = 'test.db';
     const testDbPath = path.join(testDbDir, testDbName);
 
     async function insertTestData(data: { id: string, name: string, root_path: string }): Promise<void> {
-        await new Promise<void>((resolve, reject) => {
-            testDb.run(`
-                INSERT OR REPLACE INTO node_sources 
-                (id, name, root_path)
-                VALUES (?, ?, ?)
-            `, [
-                data.id,
-                data.name,
-                data.root_path
-            ], (err) => {
-                if (err) reject(err);
-                resolve();
-            });
-        });
+        await testExecutor.run(`
+            INSERT OR REPLACE INTO node_sources 
+            (id, name, root_path)
+            VALUES (?, ?, ?)
+        `, [
+            data.id,
+            data.name,
+            data.root_path
+        ]);
     }
 
     setup(async () => {
@@ -43,35 +38,28 @@ suite('NodeSourceAR Test Suite', () => {
             fs.mkdirSync(testDbDir, { recursive: true });
         }
 
-        // Create test database
-        testDb = new sqlite3.Database(testDbPath);
-        
-        // Create test table
-        await new Promise<void>((resolve, reject) => {
-            testDb.run(`
-                CREATE TABLE IF NOT EXISTS node_sources (
-                    id TEXT PRIMARY KEY,
-                    name TEXT UNIQUE,
-                    root_path TEXT
-                )
-            `, (err) => {
-                if (err) reject(err);
-                resolve();
-            });
-        });
+        // Ensure the test database file exists (NodeSQLiteExecutor requires it)
+        if (!fs.existsSync(testDbPath)) {
+            fs.writeFileSync(testDbPath, '');
+        }
 
-        NodeSourceAR.reconnectDb(testDb);
+        // Create test executor (NodeSQLiteExecutor)
+        testExecutor = new NodeSQLiteExecutor(testDbPath);
+        // Create test table
+        await testExecutor.exec(`
+            CREATE TABLE IF NOT EXISTS node_sources (
+                id TEXT PRIMARY KEY,
+                name TEXT UNIQUE,
+                root_path TEXT
+            )
+        `);
+        NodeSourceAR.reconnectDb(testExecutor);
     });
 
     teardown(async () => {
         // Close the database connection
-        if (testDb) {
-            await new Promise<void>((resolve, reject) => {
-                testDb.close((err) => {
-                    if (err) reject(err);
-                    resolve();
-                });
-            });
+        if (testExecutor) {
+            await testExecutor.close();
         }
 
         // Delete the test database file

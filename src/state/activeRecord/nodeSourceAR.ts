@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import sqlite3 from 'sqlite3';
-import SQLite3Connection from '../db/sqlite3Connection';
+import { SQLiteConnection } from '../db/sqliteConnection';
+import { SQLiteExecutor } from '../../services/sqlite/SQLiteExecutor';
 
 interface NodeSourceARInterface {
   id: string,
@@ -9,7 +9,7 @@ interface NodeSourceARInterface {
 }
 
 export class NodeSourceAR {
-  private static _db: sqlite3.Database;
+  private static _executor: SQLiteExecutor;
   private static _all: Map<string, NodeSourceAR> = new Map(); // These are inserted in a particular order (by id)
   private row: NodeSourceARInterface;
   
@@ -19,17 +19,18 @@ export class NodeSourceAR {
     this.row = row;
   }
 
-  private static db(): sqlite3.Database {
-    if (NodeSourceAR._db) {
-      return this._db;
+  private static executor(): SQLiteExecutor {
+    if (NodeSourceAR._executor) {
+      return this._executor;
     } else {
-      this._db = SQLite3Connection.getDatabase();
-      return this._db;
+      this._executor = SQLiteConnection.getExecutor();
+      return this._executor;
     }
   }
 
-  public static reconnectDb(testDb?: sqlite3.Database): void {
-    this._db = testDb || SQLite3Connection.getDatabase();
+  public static reconnectDb(testExecutor?: SQLiteExecutor): void {
+    NodeSourceAR._all.clear();
+    this._executor = testExecutor || SQLiteConnection.getExecutor();
   }
 
   public get id(): string {
@@ -62,55 +63,46 @@ export class NodeSourceAR {
     }
   }
 
-  static loadAll(): Promise<void> {
-    return NodeSourceAR.all()
-      .then((nodeSources: NodeSourceAR[]) => {
-        nodeSources.forEach((nodeSource) => {
-          NodeSourceAR._all.set(nodeSource.name, nodeSource);
-        });
-      });
+  static async loadAll(): Promise<void> {
+    const nodeSources = await NodeSourceAR.all();
+    NodeSourceAR._all.clear();
+    nodeSources.forEach((nodeSource) => {
+      NodeSourceAR._all.set(nodeSource.name, nodeSource);
+    });
   }
 
-  static all(): Promise<NodeSourceAR[]> {
+  static async all(): Promise<NodeSourceAR[]> {
     const query = `SELECT * FROM node_sources`;
-    return new Promise((resolve, reject) => {
-      NodeSourceAR.db().all<NodeSourceARInterface>(query, (err: Error | null, rows: NodeSourceARInterface[]) => {
-        if (err) {
-          vscode.window.showErrorMessage('Error fetching node sources from the database: ' + err.message);
-          reject(err);
-        }
-        const allNodes: NodeSourceAR[] = [];
-        rows.forEach((row) => {
-          allNodes.push(new NodeSourceAR(row));
-        });
-        resolve(allNodes);
-      });
-    });
+    try {
+      const rows = await NodeSourceAR.executor().all<NodeSourceARInterface>(query);
+      return rows.map(row => new NodeSourceAR(row));
+    } catch (err) {
+      vscode.window.showErrorMessage('Error fetching node sources from the database: ' + (err as Error).message);
+      return [];
+    }
   }
 
-  static findById(id: number): Promise<NodeSourceAR | null> {
-    const query = `SELECT * FROM node_sources WHERE id = '${id}'`;
-    return NodeSourceAR._get(query);
+  static async findById(id: string | number): Promise<NodeSourceAR | null> {
+    const query = `SELECT * FROM node_sources WHERE id = ?`;
+    return NodeSourceAR._get(query, [id.toString()]);
   }
 
-  static findByName(name: string): Promise<NodeSourceAR | null> {
-    const query = `SELECT * FROM node_sources WHERE name = '${name}'`;
-    return NodeSourceAR._get(query);
+  static async findByName(name: string): Promise<NodeSourceAR | null> {
+    const query = `SELECT * FROM node_sources WHERE name = ?`;
+    return NodeSourceAR._get(query, [name]);
   }
 
-  private static _get(query: string): Promise<NodeSourceAR | null> {
-    return new Promise((resolve, reject) => {
-      NodeSourceAR.db().get<NodeSourceARInterface>(query, (err: Error | null, row: NodeSourceARInterface) => {
-        if (err) {
-          vscode.window.showErrorMessage('Error fetching node from the database: ' + err.message);
-          reject(err);
-        }
-        if (row) {
-          resolve(new NodeSourceAR(row));
-        } else {
-          resolve(null);
-        }
-      });
-    });
+  private static async _get(query: string, params: (string | number | boolean | null)[] = []): Promise<NodeSourceAR | null> {
+    try {
+      const row = await NodeSourceAR.executor().get<NodeSourceARInterface>(query, params);
+      if (row) {
+        return new NodeSourceAR(row);
+      } else {
+        return null;
+      }
+    } catch (err) {
+      vscode.window.showErrorMessage('Error fetching node from the database: ' + (err as Error).message);
+      return null;
+    }
   }
 }
