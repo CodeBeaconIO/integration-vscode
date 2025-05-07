@@ -4,6 +4,12 @@ All notable changes to the "Code Beacon" extension will be documented in this fi
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [0.2.2] - 2025-05-07
+
+### Noop
+- No changes
+- Version bump for release
+
 ## [0.2.1] - 2025-05-06
 
 ### Removed
