@@ -79,11 +79,7 @@ This extension contributes the following settings:
 
 ## Release Notes
 
-### 0.1.0
-
-- Initial release of Code Beacon
-- Method call visualization
-- Recording management
+See the [CHANGELOG](CHANGELOG.md) for the latest release information.
 
 ## License
 
