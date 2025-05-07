@@ -184,8 +184,38 @@ export class SqliteSetupService {
             vscode.ConfigurationTarget.Global
         );
       
-        
-        return true;
+        // Run a basic test to verify the binary works
+        try {
+            const testResult = await this.testSqliteBinary(sqlitePath);
+            if (!testResult.success) {
+                vscode.window.showErrorMessage(`Error testing SQLite binary: ${testResult.error}`);
+                return false;
+            }
+            vscode.window.showInformationMessage('SQLite binary configured successfully.');
+            return true;
+        } catch (error) {
+            console.error('Error testing SQLite binary:', error);
+            vscode.window.showErrorMessage(`Error testing SQLite binary: ${error instanceof Error ? error.message : String(error)}`);
+            return false;
+        }
+    }
+
+    /**
+     * Tests if the SQLite binary works correctly
+     */
+    private async testSqliteBinary(binaryPath: string): Promise<{ success: boolean; error?: string }> {
+        try {
+            const result = await this.execPromise(`"${binaryPath}" -version`);
+            if (result.stderr) {
+                return { success: false, error: result.stderr };
+            }
+            return { success: true };
+        } catch (error) {
+            return { 
+                success: false, 
+                error: error instanceof Error ? error.message : String(error)
+            };
+        }
     }
 
     /**

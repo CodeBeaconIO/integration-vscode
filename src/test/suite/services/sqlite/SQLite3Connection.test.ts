@@ -17,19 +17,32 @@ suite('SQLite3Connection', () => {
   // Helper to initialize a test database
   async function initTestDb(dbPath: string): Promise<void> {
     return new Promise((resolve, reject) => {
-      const db = new sqlite3.Database(dbPath);
-      db.exec(`
-        CREATE TABLE IF NOT EXISTS treenodes (
-          id INTEGER PRIMARY KEY,
-          name TEXT
-        );
-        INSERT INTO treenodes (name) VALUES ('test1');
-      `, (err) => {
+      const db = new sqlite3.Database(dbPath, (err) => {
         if (err) {
           reject(err);
-        } else {
-          db.close(() => resolve());
+          return;
         }
+        
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS treenodes (
+            id INTEGER PRIMARY KEY,
+            name TEXT
+          );
+          INSERT INTO treenodes (name) VALUES ('test1');
+        `, (execErr) => {
+          if (execErr) {
+            // Close the database even if exec fails
+            db.close(() => reject(execErr));
+          } else {
+            db.close((closeErr) => {
+              if (closeErr) {
+                reject(closeErr);
+              } else {
+                resolve();
+              }
+            });
+          }
+        });
       });
     });
   }
@@ -41,10 +54,23 @@ suite('SQLite3Connection', () => {
     const sqliteConnectionObj = SQLite3Connection as unknown as {
       instance: SQLite3Connection | undefined
     };
+    
+    if (sqliteConnectionObj.instance) {
+      try {
+        const db = sqliteConnectionObj.instance.getDatabase();
+        if (db) {
+          db.close();
+        }
+      } catch (e) {
+        console.error('Error closing database:', e);
+      }
+    }
+    
     sqliteConnectionObj.instance = undefined;
   }
   
-  setup(() => {
+  suiteSetup(() => {
+    // This runs once before all tests
     testDir = path.join(os.tmpdir(), `sqlite3-connection-test-${Date.now()}`);
     
     // Create test directory if it doesn't exist
@@ -61,12 +87,56 @@ suite('SQLite3Connection', () => {
     // Save original createConfig function
     originalCreateConfig = configModule.createConfig;
     
-    // Override createConfig function
+    // Save original showErrorMessage function
+    originalShowErrorMessage = vscode.window.showErrorMessage;
+  });
+  
+  suiteTeardown(() => {
+    // Clean up after all tests
+    try {
+      if (fs.existsSync(testDir)) {
+        const dbDir = path.join(testDir, 'db');
+        if (fs.existsSync(dbDir)) {
+          const files = fs.readdirSync(dbDir);
+          files.forEach(file => {
+            try {
+              fs.unlinkSync(path.join(dbDir, file));
+            } catch (e) {
+              console.error(`Failed to delete file ${file}:`, e);
+            }
+          });
+          fs.rmdirSync(dbDir);
+        }
+        fs.rmdirSync(testDir);
+      }
+    } catch (err) {
+      console.error('Error cleaning up test directory:', err);
+    }
+    
+    // Restore original functions
+    Object.defineProperty(configModule, 'createConfig', {
+      value: originalCreateConfig,
+      writable: true,
+      configurable: true
+    });
+    
+    vscode.window.showErrorMessage = originalShowErrorMessage;
+  });
+  
+  setup(() => {
+    // Setup before each test
+    
+    // Create a separate test DB path for each test
+    const dbDir = path.join(testDir, 'db');
+    const testDbFilename = `test-${Date.now()}.db`;
+    const testDbPath = path.join(dbDir, testDbFilename);
+    
+    // Override createConfig function for this test
     Object.defineProperty(configModule, 'createConfig', {
       value: () => ({
         getDataDir: () => testDir,
         getDbDir: () => dbDir,
-        getDbPath: () => path.join(dbDir, 'test.db'),
+        getDbPath: () => testDbPath,
         getRefreshPath: () => path.join(testDir, 'refresh'),
         getRootDir: () => testDir,
         getPathsPath: () => path.join(testDir, 'paths.yml'),
@@ -78,7 +148,6 @@ suite('SQLite3Connection', () => {
     
     // Initialize error message tracking
     showErrorMessages = [];
-    originalShowErrorMessage = vscode.window.showErrorMessage;
     vscode.window.showErrorMessage = function(message: string): Thenable<string | undefined> {
       showErrorMessages.push(message);
       return Promise.resolve(undefined);
@@ -89,27 +158,8 @@ suite('SQLite3Connection', () => {
   });
   
   teardown(() => {
-    // Restore original functions
-    Object.defineProperty(configModule, 'createConfig', {
-      value: originalCreateConfig,
-      writable: true,
-      configurable: true
-    });
-    vscode.window.showErrorMessage = originalShowErrorMessage;
-    
-    // Try to remove the test directory and all its contents
-    try {
-      if (fs.existsSync(testDir)) {
-        const files = fs.readdirSync(path.join(testDir, 'db'));
-        files.forEach(file => {
-          fs.unlinkSync(path.join(testDir, 'db', file));
-        });
-        fs.rmdirSync(path.join(testDir, 'db'));
-        fs.rmdirSync(testDir);
-      }
-    } catch (err) {
-      console.error('Error cleaning up test directory:', err);
-    }
+    // Clean up after each test
+    resetSQLite3ConnectionInstance();
   });
   
   // We can directly test the MissingDbError by constructing it
@@ -124,12 +174,16 @@ suite('SQLite3Connection', () => {
     this.timeout(5000);
     
     // Create and initialize a test database
-    const dbPath = path.join(testDir, 'db', 'test.db');
+    const config = configModule.createConfig();
+    const dbDir = config.getDbDir();
+    const dbName = 'connect-test.db';
+    const dbPath = path.join(dbDir, dbName);
+    
     fs.writeFileSync(dbPath, ''); // Create empty file
     await initTestDb(dbPath);
     
     // Connect to the database
-    SQLite3Connection.connect('test.db');
+    SQLite3Connection.connect(dbName);
     
     // Get the database
     const db = SQLite3Connection.getDatabase();
@@ -157,12 +211,16 @@ suite('SQLite3Connection', () => {
     this.timeout(5000);
     
     // Create and initialize a test database
-    const dbPath = path.join(testDir, 'db', 'test.db');
+    const config = configModule.createConfig();
+    const dbDir = config.getDbDir();
+    const dbName = 'reconnect-test.db';
+    const dbPath = path.join(dbDir, dbName);
+    
     fs.writeFileSync(dbPath, ''); // Create empty file
     await initTestDb(dbPath);
     
     // Connect to the database
-    SQLite3Connection.connect('test.db');
+    SQLite3Connection.connect(dbName);
     
     // Get the initial database
     const db1 = SQLite3Connection.getDatabase();
@@ -186,7 +244,9 @@ suite('SQLite3Connection', () => {
     this.timeout(5000);
     
     // Create and initialize a test database
-    const dbPath = path.join(testDir, 'db', 'test.db');
+    const config = configModule.createConfig();
+    const dbPath = config.getDbPath();
+    
     fs.writeFileSync(dbPath, ''); // Create empty file
     await initTestDb(dbPath);
     
@@ -210,12 +270,16 @@ suite('SQLite3Connection', () => {
     this.timeout(5000);
     
     // Create and initialize a test database
-    const dbPath = path.join(testDir, 'db', 'test.db');
+    const config = configModule.createConfig();
+    const dbDir = config.getDbDir();
+    const dbName = 'getdb-test.db';
+    const dbPath = path.join(dbDir, dbName);
+    
     fs.writeFileSync(dbPath, ''); // Create empty file
     await initTestDb(dbPath);
     
     // Connect to the database
-    SQLite3Connection.connect('test.db');
+    SQLite3Connection.connect(dbName);
     
     // Get the instance directly (need to cast to access private method)
     const instance = (SQLite3Connection as unknown as { 
@@ -231,4 +295,4 @@ suite('SQLite3Connection', () => {
     // They should be the same object
     assert.strictEqual(db1, db2, 'Both methods should return the same database');
   });
-}); 
+});
