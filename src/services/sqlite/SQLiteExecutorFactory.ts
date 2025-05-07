@@ -34,7 +34,7 @@ export class SQLiteExecutorFactory {
    * @param dbPath Path to the SQLite database file
    * @param requireBinary If true, throws an error if SQLite binary is not configured
    */
-  static createExecutor(dbPath: string, requireBinary: boolean = false): SQLiteExecutor {
+  static createExecutor(dbPath: string, requireBinary: boolean = true): SQLiteExecutor {
     const config = createConfig();
     const binaryPath = config.getSqliteBinaryPath();
     

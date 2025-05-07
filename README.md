@@ -20,6 +20,12 @@ This extension is only part of the entire offering and requires the codebeacon-t
 - Visual Studio Code 1.85.0 or higher
 - Ruby 2.7 or higher
 - A Ruby project with the Code Beacon gem installed
+- SQLite3 binary (sqlite3) installed on your system
+  - Mac: Available via Homebrew (`brew install sqlite3`)
+  - Linux: Available via package manager (e.g., `apt install sqlite3`)
+  - Windows: Download from the [SQLite website](https://www.sqlite.org/download.html)
+
+> **Note**: Code Beacon requires the SQLite3 command-line binary to be installed and configured. During initial setup, the extension will attempt to automatically detect the SQLite3 binary on your system. If it cannot be found, you will be prompted to provide the path manually.
 
 ## Getting Started
 
