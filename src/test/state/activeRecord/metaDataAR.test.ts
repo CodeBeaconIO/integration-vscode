@@ -2,11 +2,36 @@ import * as assert from 'assert';
 import { MetaDataAR, MetaDataARInterface } from '../../../state/activeRecord/metaDataAR';
 import * as path from 'path';
 import * as fs from 'fs';
-import { NodeSQLiteExecutor } from '../../../services/sqlite/NodeSQLiteExecutor';
+import { BinarySQLiteExecutor } from '../../../services/sqlite/BinarySQLiteExecutor';
+import * as os from 'os';
+import * as cp from 'child_process';
 
-suite('MetaDataAR Test Suite', () => {
+function findSqliteBinary() {
+    try {
+        const whichCommand = os.platform() === 'win32' ? 'where' : 'which';
+        const { stdout } = cp.spawnSync(whichCommand, ['sqlite3'], { encoding: 'utf8' });
+        const binaryPath = stdout.trim().split('\n')[0];
+        if (binaryPath && fs.existsSync(binaryPath)) {
+            return binaryPath;
+        }
+    } catch {}
+    const commonPaths = os.platform() === 'win32'
+        ? ['C:\\Program Files\\SQLite\\sqlite3.exe', 'C:\\sqlite\\sqlite3.exe']
+        : ['/usr/bin/sqlite3', '/usr/local/bin/sqlite3', '/opt/homebrew/bin/sqlite3'];
+    for (const p of commonPaths) {
+        if (fs.existsSync(p)) return p;
+    }
+    return null;
+}
+
+suite('MetaDataAR Test Suite', function() {
+    const sqliteBinaryPath = findSqliteBinary();
+    if (!sqliteBinaryPath) {
+        console.log('Skipping MetaDataAR tests - SQLite binary not found');
+        return;
+    }
     let metaData: MetaDataAR;
-    let testExecutor: NodeSQLiteExecutor;
+    let testExecutor: BinarySQLiteExecutor;
     const testDbPath = path.join(__dirname, '../../../../.code-beacon/db/test_metadata.db');
 
     const createMockData = (): Partial<MetaDataARInterface> => {
@@ -40,8 +65,8 @@ suite('MetaDataAR Test Suite', () => {
             fs.writeFileSync(testDbPath, '');
         }
 
-        // Create test executor (NodeSQLiteExecutor)
-        testExecutor = new NodeSQLiteExecutor(testDbPath);
+        // Create test executor with detected SQLite binary path
+        testExecutor = new BinarySQLiteExecutor(testDbPath, sqliteBinaryPath);
         MetaDataAR.reconnectDb(testExecutor);
         // Create metadata instance
         metaData = new MetaDataAR(testDbPath);

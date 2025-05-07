@@ -5,7 +5,7 @@ import * as os from 'os';
 import * as vscode from 'vscode';
 import { SQLiteConnection, MissingDbError } from '../../../../state/db/sqliteConnection';
 import * as configModule from '../../../../config';
-import { NodeSQLiteExecutor } from '../../../../services/sqlite/NodeSQLiteExecutor';
+import { BinarySQLiteExecutor } from '../../../../services/sqlite/BinarySQLiteExecutor';
 
 suite('SQLiteConnection', () => {
   // Define paths for our test databases
@@ -13,10 +13,35 @@ suite('SQLiteConnection', () => {
   let showErrorMessages: string[] = [];
   let originalCreateConfig: typeof configModule.createConfig;
   let originalShowErrorMessage: typeof vscode.window.showErrorMessage;
+  let testBinaryPath = '/usr/bin/sqlite3'; // Default path
+  
+  // Find a SQLite binary for tests
+  function findSqliteBinary(): string {
+    const platform = os.platform();
+    const possiblePaths = platform === 'win32'
+      ? ['C:\\Program Files\\SQLite\\sqlite3.exe', 'C:\\sqlite\\sqlite3.exe']
+      : ['/usr/bin/sqlite3', '/usr/local/bin/sqlite3', '/opt/homebrew/bin/sqlite3'];
+      
+    for (const binPath of possiblePaths) {
+      if (fs.existsSync(binPath)) {
+        return binPath;
+      }
+    }
+    
+    return platform === 'win32' ? 'sqlite3.exe' : 'sqlite3';
+  }
   
   // Helper to initialize a test database
   async function initTestDb(dbPath: string): Promise<void> {
-    const executor = new NodeSQLiteExecutor(dbPath);
+    // Find a SQLite binary for tests
+    const binaryPath = findSqliteBinary();
+    
+    // Create database file if it doesn't exist
+    if (!fs.existsSync(dbPath)) {
+      fs.writeFileSync(dbPath, '');
+    }
+    
+    const executor = new BinarySQLiteExecutor(dbPath, binaryPath);
     await executor.exec(`
       CREATE TABLE IF NOT EXISTS treenodes (
         id INTEGER PRIMARY KEY,
@@ -39,6 +64,7 @@ suite('SQLiteConnection', () => {
   
   setup(() => {
     testDir = path.join(os.tmpdir(), `sqlite-connection-test-${Date.now()}`);
+    testBinaryPath = findSqliteBinary();
     
     // Create test directory if it doesn't exist
     if (!fs.existsSync(testDir)) {
@@ -58,12 +84,12 @@ suite('SQLiteConnection', () => {
     Object.defineProperty(configModule, 'createConfig', {
       value: () => ({
         getDataDir: () => testDir,
-        getDbDir: () => dbDir,
-        getDbPath: () => path.join(dbDir, 'test.db'),
+        getDbDir: () => path.join(testDir, 'db'),
+        getDbPath: () => path.join(testDir, 'db', 'test.db'),
         getRefreshPath: () => path.join(testDir, 'refresh'),
         getRootDir: () => testDir,
         getPathsPath: () => path.join(testDir, 'paths.yml'),
-        getSqliteBinaryPath: () => ''
+        getSqliteBinaryPath: () => testBinaryPath
       }),
       writable: true,
       configurable: true

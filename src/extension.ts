@@ -6,7 +6,7 @@ import { AppTreeProvider } from './components/methodDirectory/appTreeProvider';
 import { RecordingsTreeProvider } from './components/recordings/recordingsViewProvider';
 import { Coordinator } from './coordinator';
 import { DBManager } from './state/db/manager';
-import SQLite3Connection from './state/db/sqlite3Connection';
+import { SQLiteConnection } from './state/db/sqliteConnection';
 import { SqliteSetupService } from './services/sqlite/sqliteSetupService';
 
 // This method is called when your extension is activated
@@ -31,7 +31,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	}
 	
 	try {
-		SQLite3Connection.getDatabase();
+		SQLiteConnection.getExecutor();
 	} catch (error) {
 		vscode.commands.executeCommand('setContext', 'codeBeaconContext.welcome', 'dbMissing');
 		return; // Don't proceed with activation if database can't be accessed

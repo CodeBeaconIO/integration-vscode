@@ -1,9 +1,36 @@
 import * as assert from 'assert';
 import { TreeNodeDataAR, TreeNodeDataARInterface } from '../../../state/activeRecord/treeNodeDataAR';
-import { NodeSQLiteExecutor } from '../../../services/sqlite/NodeSQLiteExecutor';
-import { SQLiteExecutor } from '../../../services/sqlite/SQLiteExecutor';
+import { BinarySQLiteExecutor } from '../../../services/sqlite/BinarySQLiteExecutor';
+import * as os from 'os';
+import * as cp from 'child_process';
+import * as fs from 'fs';
+import { createTempDb } from '../../util/TestUtils';
 
-suite('TreeNodeDataAR Test Suite', () => {
+function findSqliteBinary() {
+  try {
+    const whichCommand = os.platform() === 'win32' ? 'where' : 'which';
+    const { stdout } = cp.spawnSync(whichCommand, ['sqlite3'], { encoding: 'utf8' });
+    const binaryPath = stdout.trim().split('\n')[0];
+    if (binaryPath && fs.existsSync(binaryPath)) {
+      return binaryPath;
+    }
+  } catch {}
+  const commonPaths = os.platform() === 'win32'
+    ? ['C:\\Program Files\\SQLite\\sqlite3.exe', 'C:\\sqlite\\sqlite3.exe']
+    : ['/usr/bin/sqlite3', '/usr/local/bin/sqlite3', '/opt/homebrew/bin/sqlite3'];
+  for (const p of commonPaths) {
+    if (fs.existsSync(p)) return p;
+  }
+  return null;
+}
+
+suite('TreeNodeDataAR Test Suite', function() {
+    const sqliteBinaryPath = findSqliteBinary();
+    if (!sqliteBinaryPath) {
+        console.log('Skipping TreeNodeDataAR tests - SQLite binary not found');
+        return;
+    }
+
     const createMockNodeData = (): TreeNodeDataARInterface => {
         return {
             id: '1',
@@ -41,7 +68,8 @@ suite('TreeNodeDataAR Test Suite', () => {
     };
 
     let treeNode: TreeNodeDataAR;
-    let testExecutor: SQLiteExecutor;
+    let testExecutor: BinarySQLiteExecutor;
+    let tempDbPath: string;
 
     async function insertTestData(data: TreeNodeDataARInterface): Promise<void> {
         await testExecutor.run(`
@@ -66,8 +94,10 @@ suite('TreeNodeDataAR Test Suite', () => {
     }
 
     setup(async () => {
-        // Create in-memory database for testing
-        testExecutor = new NodeSQLiteExecutor(':memory:');
+        tempDbPath = createTempDb();
+        
+        // Create a new database executor with the temp file
+        testExecutor = new BinarySQLiteExecutor(tempDbPath, sqliteBinaryPath);
         
         // Create test table
         await testExecutor.exec(`
@@ -95,6 +125,15 @@ suite('TreeNodeDataAR Test Suite', () => {
         // Close the database connection
         if (testExecutor) {
             await testExecutor.close();
+        }
+        
+        // Delete the temporary database file
+        if (tempDbPath && fs.existsSync(tempDbPath)) {
+            try {
+                fs.unlinkSync(tempDbPath);
+            } catch (e) {
+                console.error('Error deleting temporary database file:', e);
+            }
         }
     });
 

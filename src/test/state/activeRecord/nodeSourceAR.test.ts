@@ -3,9 +3,29 @@ import * as vscode from 'vscode';
 import { NodeSourceAR } from '../../../state/activeRecord/nodeSourceAR';
 import * as path from 'path';
 import * as fs from 'fs';
-import { NodeSQLiteExecutor } from '../../../services/sqlite/NodeSQLiteExecutor';
+import { BinarySQLiteExecutor } from '../../../services/sqlite/BinarySQLiteExecutor';
+import * as os from 'os';
+import * as cp from 'child_process';
 
-suite('NodeSourceAR Test Suite', () => {
+function findSqliteBinary() {
+    try {
+        const whichCommand = os.platform() === 'win32' ? 'where' : 'which';
+        const { stdout } = cp.spawnSync(whichCommand, ['sqlite3'], { encoding: 'utf8' });
+        const binaryPath = stdout.trim().split('\n')[0];
+        if (binaryPath && fs.existsSync(binaryPath)) {
+            return binaryPath;
+        }
+    } catch {}
+    const commonPaths = os.platform() === 'win32'
+        ? ['C:\\Program Files\\SQLite\\sqlite3.exe', 'C:\\sqlite\\sqlite3.exe']
+        : ['/usr/bin/sqlite3', '/usr/local/bin/sqlite3', '/opt/homebrew/bin/sqlite3'];
+    for (const p of commonPaths) {
+        if (fs.existsSync(p)) return p;
+    }
+    return null;
+}
+
+suite('NodeSourceAR Test Suite', function() {
     const createMockNodeSourceData = () => {
         return {
             id: '1',
@@ -15,10 +35,16 @@ suite('NodeSourceAR Test Suite', () => {
     };
 
     let nodeSource: NodeSourceAR;
-    let testExecutor: NodeSQLiteExecutor;
+    let testExecutor: BinarySQLiteExecutor;
     const testDbDir = path.join(__dirname, '../../../../.code-beacon/db');
     const testDbName = 'test.db';
     const testDbPath = path.join(testDbDir, testDbName);
+    const sqliteBinaryPath = findSqliteBinary();
+
+    if (!sqliteBinaryPath) {
+        console.log('Skipping NodeSourceAR tests - SQLite binary not found');
+        return;
+    }
 
     async function insertTestData(data: { id: string, name: string, root_path: string }): Promise<void> {
         await testExecutor.run(`
@@ -43,8 +69,8 @@ suite('NodeSourceAR Test Suite', () => {
             fs.writeFileSync(testDbPath, '');
         }
 
-        // Create test executor (NodeSQLiteExecutor)
-        testExecutor = new NodeSQLiteExecutor(testDbPath);
+        // Create test executor with detected SQLite binary path
+        testExecutor = new BinarySQLiteExecutor(testDbPath, sqliteBinaryPath);
         // Create test table
         await testExecutor.exec(`
             CREATE TABLE IF NOT EXISTS node_sources (

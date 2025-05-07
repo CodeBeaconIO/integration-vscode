@@ -1,3 +1,3 @@
 export * from './SQLiteExecutor';
-export * from './NodeSQLiteExecutor';
-export * from './SQLiteExecutorFactory'; 
+export * from './SQLiteExecutorFactory';
+export * from './BinarySQLiteExecutor'; 

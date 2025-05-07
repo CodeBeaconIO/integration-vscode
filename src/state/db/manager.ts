@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { newDbEventEmitter, newDbInstanceEventEmitter, reloadEventEmitter } from '../../eventEmitter';
-import SQLite3Connection from './sqlite3Connection';
+import { SQLiteConnection } from './sqliteConnection';
 import { TreeNodeDataAR } from '../activeRecord/treeNodeDataAR';
 import { NodeSourceAR } from '../activeRecord/nodeSourceAR';
 
@@ -28,7 +28,7 @@ export class DBManager {
 
   registerCommandHandlers() {
     vscode.commands.registerCommand('recordingsTree.loadDb', (dbFileName) => {
-      SQLite3Connection.connect(dbFileName);
+      SQLiteConnection.connect(dbFileName);
       newDbInstanceEventEmitter.fire();
     });
   }

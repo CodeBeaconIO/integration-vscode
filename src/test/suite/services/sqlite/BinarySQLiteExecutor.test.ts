@@ -1,5 +1,4 @@
 import * as assert from 'assert';
-import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as cp from 'child_process';
@@ -7,7 +6,7 @@ import { BinarySQLiteExecutor } from '../../../../services/sqlite/BinarySQLiteEx
 import { SQLiteExecutorFactory } from '../../../../services/sqlite/SQLiteExecutorFactory';
 import * as configModule from '../../../../config';
 import { IConfig } from '../../../../config';
-
+import { createTempDb } from '../../../util/TestUtils';
 // Mock for the config
 const originalCreateConfig = configModule.createConfig;
 
@@ -73,11 +72,13 @@ suite('BinarySQLiteExecutor', function() {
 
   suiteSetup(async () => {
     // Create a temporary test database file
-    const tmpdir = os.tmpdir();
-    testDbPath = path.join(tmpdir, `test-binary-db-${Date.now()}.sqlite`);
+    testDbPath = createTempDb();
+    
+    // Touch the file to create it
+    fs.writeFileSync(testDbPath, '');
     
     // Initialize the database with a test table
-    executor = new BinarySQLiteExecutor(`:memory:`, binaryPath); 
+    executor = new BinarySQLiteExecutor(testDbPath, binaryPath); 
     
     await executor.exec(`
       CREATE TABLE test_table (
@@ -98,7 +99,11 @@ suite('BinarySQLiteExecutor', function() {
     
     // Remove the test database file if it exists
     if (fs.existsSync(testDbPath)) {
-      fs.unlinkSync(testDbPath);
+      try {
+        fs.unlinkSync(testDbPath);
+      } catch (e) {
+        console.error('Error deleting temporary database file:', e);
+      }
     }
   });
 
@@ -234,13 +239,49 @@ suite('BinarySQLiteExecutor', function() {
   
   suite('SQLiteExecutorFactory', () => {
     test('should create a BinarySQLiteExecutor from factory', () => {
-      const testExecutor = SQLiteExecutorFactory.createBinaryExecutor(':memory:', binaryPath);
-      assert.ok(testExecutor instanceof BinarySQLiteExecutor);
+      // Create temporary db path for this test
+      const tempFactoryDbPath = createTempDb();
+      
+      try {
+        const testExecutor = SQLiteExecutorFactory.createBinaryExecutor(tempFactoryDbPath, binaryPath);
+        assert.ok(testExecutor instanceof BinarySQLiteExecutor);
+        
+        // Close and cleanup
+        testExecutor.close().then(() => {
+          if (fs.existsSync(tempFactoryDbPath)) {
+            fs.unlinkSync(tempFactoryDbPath);
+          }
+        });
+      } catch (e) {
+        // Cleanup in case of error
+        if (fs.existsSync(tempFactoryDbPath)) {
+          fs.unlinkSync(tempFactoryDbPath);
+        }
+        throw e;
+      }
     });
     
     test('factory should create BinarySQLiteExecutor when binary path is configured', () => {
-      const testExecutor = SQLiteExecutorFactory.createExecutor(':memory:');
-      assert.ok(testExecutor instanceof BinarySQLiteExecutor);
+      // Create temporary db path for this test
+      const tempFactoryDbPath = createTempDb();
+      
+      try {
+        const testExecutor = SQLiteExecutorFactory.createExecutor(tempFactoryDbPath);
+        assert.ok(testExecutor instanceof BinarySQLiteExecutor);
+        
+        // Close and cleanup
+        testExecutor.close().then(() => {
+          if (fs.existsSync(tempFactoryDbPath)) {
+            fs.unlinkSync(tempFactoryDbPath);
+          }
+        });
+      } catch (e) {
+        // Cleanup in case of error
+        if (fs.existsSync(tempFactoryDbPath)) {
+          fs.unlinkSync(tempFactoryDbPath);
+        }
+        throw e;
+      }
     });
   });
 }); 

@@ -4,6 +4,12 @@ All notable changes to the "Code Beacon" extension will be documented in this fi
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [0.2.1] - 2025-05-06
+
+### Removed
+- Node sqlite3 implementation and dependency
+
+
 ## [0.2.0] - 2025-05-06
 
 ### Added

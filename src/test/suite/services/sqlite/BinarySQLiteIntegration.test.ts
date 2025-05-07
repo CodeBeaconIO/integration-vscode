@@ -1,43 +1,16 @@
 import * as assert from 'assert';
-import * as path from 'path';
 import * as fs from 'fs';
-import * as os from 'os';
-import * as cp from 'child_process';
 import { BinarySQLiteExecutor } from '../../../../services/sqlite/BinarySQLiteExecutor';
 import * as configModule from '../../../../config';
 import { SQLiteConnection } from '../../../../state/db/sqliteConnection';
-
-// Helper function to check if sqlite3 is available
-function isSqliteAvailable(): { available: boolean; path?: string } {
-  try {
-    // Try to find sqlite3 with 'which' (Unix) or 'where' (Windows)
-    const whichCommand = os.platform() === 'win32' ? 'where' : 'which';
-    const { stdout } = cp.spawnSync(whichCommand, ['sqlite3'], { encoding: 'utf8' });
-    const binaryPath = stdout.trim().split('\n')[0]; // Get the first result
-    
-    if (binaryPath && fs.existsSync(binaryPath)) {
-      return { available: true, path: binaryPath };
-    }
-  } catch (err) {
-    // If the command fails, sqlite3 might not be in PATH
-  }
-  
-  // Check common locations
-  const commonPaths = os.platform() === 'win32'
-    ? ['C:\\Program Files\\SQLite\\sqlite3.exe', 'C:\\sqlite\\sqlite3.exe']
-    : ['/usr/bin/sqlite3', '/usr/local/bin/sqlite3', '/opt/homebrew/bin/sqlite3'];
-  
-  for (const path of commonPaths) {
-    if (fs.existsSync(path)) {
-      return { available: true, path };
-    }
-  }
-  
-  return { available: false };
-}
+import { 
+  findSqliteBinary, 
+  setupDatabaseIsolation, 
+  teardownDatabaseIsolation 
+} from '../../../util/TestUtils';
 
 suite('BinarySQLiteExecutor Integration', function() {
-  const sqliteCheck = isSqliteAvailable();
+  const sqliteCheck = findSqliteBinary();
   
   // Skip all tests if sqlite3 binary is not available
   if (!sqliteCheck.available) {
@@ -50,48 +23,18 @@ suite('BinarySQLiteExecutor Integration', function() {
   let originalCreateConfig: typeof configModule.createConfig;
   
   setup(() => {
-    // Save original createConfig
-    originalCreateConfig = configModule.createConfig;
-    
-    // Create a temp DB file for testing
-    const tmpdir = os.tmpdir();
-    testDbPath = path.join(tmpdir, `binary-sqlite-integration-${Date.now()}.db`);
-    
-    // Override createConfig
-    Object.defineProperty(configModule, 'createConfig', {
-      value: () => ({
-        getSqliteBinaryPath: () => binaryPath,
-        getDataDir: () => tmpdir,
-        getDbDir: () => tmpdir,
-        getDbPath: () => testDbPath,
-        getRefreshPath: () => path.join(tmpdir, 'refresh'),
-        getRootDir: () => tmpdir,
-        getPathsPath: () => path.join(tmpdir, 'paths.yml')
-      }),
-      writable: true,
-      configurable: true
-    });
+    // Setup complete database isolation 
+    const isolation = setupDatabaseIsolation();
+    originalCreateConfig = isolation.originalCreateConfig;
+    testDbPath = isolation.testDbPath;
     
     // Touch the file so it exists
     fs.writeFileSync(testDbPath, '');
   });
   
-  teardown(() => {
-    // Restore original createConfig
-    Object.defineProperty(configModule, 'createConfig', {
-      value: originalCreateConfig,
-      writable: true,
-      configurable: true
-    });
-    
-    // Delete test database
-    if (fs.existsSync(testDbPath)) {
-      try {
-        fs.unlinkSync(testDbPath);
-      } catch (err) {
-        console.error('Error deleting test database:', err);
-      }
-    }
+  teardown(async () => {
+    // Teardown database isolation
+    await teardownDatabaseIsolation(originalCreateConfig, testDbPath);
   });
   
   test('should work with SQLiteConnection singleton when binary is required', async function() {
@@ -99,8 +42,8 @@ suite('BinarySQLiteExecutor Integration', function() {
     this.timeout(10000);
     
     try {
-      // Get executor from SQLiteConnection with binary required
-      const executor = SQLiteConnection.getExecutor(true);
+      // Get executor from SQLiteConnection (binary is required by default now)
+      const executor = SQLiteConnection.getExecutor();
       
       // Verify it's a BinarySQLiteExecutor
       assert.ok(executor instanceof BinarySQLiteExecutor);

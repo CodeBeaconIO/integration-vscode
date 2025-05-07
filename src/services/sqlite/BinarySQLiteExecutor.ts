@@ -2,7 +2,6 @@ import * as fs from 'fs';
 import * as cp from 'child_process';
 import * as os from 'os';
 import * as path from 'path';
-import sqlite3 from 'sqlite3';
 import { SQLiteExecutor, SQLiteExecutionError } from './SQLiteExecutor';
 
 /**
@@ -12,14 +11,12 @@ export class BinarySQLiteExecutor implements SQLiteExecutor {
   private dbPath: string;
   private binaryPath: string;
   private inTransaction: boolean = false;
-  private tempDb: sqlite3.Database | null = null;
-  private tempDbPath: string | null = null;
 
   /**
    * Creates a new BinarySQLiteExecutor
-   * @param dbPath Path to the SQLite database file or ":memory:" for in-memory database
+   * @param dbPath Path to the SQLite database file
    * @param binaryPath Path to the SQLite binary
-   * @throws Error if the database file doesn't exist (except for in-memory database)
+   * @throws Error if the database file doesn't exist
    */
   constructor(dbPath: string, binaryPath: string) {
     if (!fs.existsSync(binaryPath)) {
@@ -27,22 +24,11 @@ export class BinarySQLiteExecutor implements SQLiteExecutor {
     }
 
     this.binaryPath = binaryPath;
-
-    // For in-memory database, we need to create a temporary real file
-    // SQLite binary can't directly use :memory:
-    if (dbPath === ':memory:') {
-      const tmpdir = os.tmpdir();
-      this.tempDbPath = path.join(tmpdir, `temp-sqlite-${Date.now()}.db`);
-      this.dbPath = this.tempDbPath;
-      
-      // Create the database file
-      this.tempDb = new sqlite3.Database(this.tempDbPath);
-    } else {
-      if (!fs.existsSync(dbPath)) {
-        throw new Error(`Database file does not exist: ${dbPath}`);
-      }
-      this.dbPath = dbPath;
+    
+    if (!fs.existsSync(dbPath)) {
+      throw new Error(`Database file does not exist: ${dbPath}`);
     }
+    this.dbPath = dbPath;
   }
 
   /**
@@ -283,47 +269,7 @@ export class BinarySQLiteExecutor implements SQLiteExecutor {
    * Close the database connection
    */
   async close(): Promise<void> {
-    // If we have a temporary database, close it and delete the file
-    if (this.tempDb) {
-      return new Promise((resolve, reject) => {
-        this.tempDb!.close((err: Error | null) => {
-          if (err) {
-            reject(new SQLiteExecutionError('Error closing database connection', err));
-            return;
-          }
-          
-          this.tempDb = null;
-          
-          // Delete the temporary database file
-          if (this.tempDbPath && fs.existsSync(this.tempDbPath)) {
-            try {
-              fs.unlinkSync(this.tempDbPath);
-              this.tempDbPath = null;
-            } catch (unlinkErr) {
-              console.error('Error deleting temporary database file:', unlinkErr);
-            }
-          }
-          
-          resolve();
-        });
-      });
-    }
-    
+    // Nothing to do for basic file-based databases
     return Promise.resolve();
-  }
-
-  /**
-   * Get the raw database object
-   * This is mainly for compatibility with the Node.js implementation
-   * and may not be useful for the binary implementation
-   */
-  getDatabase(): sqlite3.Database {
-    if (this.tempDb) {
-      return this.tempDb;
-    }
-    
-    // Create a temporary connection to return
-    // This is not ideal, but maintains interface compatibility
-    return new sqlite3.Database(this.dbPath);
   }
 } 

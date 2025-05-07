@@ -1,5 +1,3 @@
-import sqlite3 from 'sqlite3';
-
 /**
  * Interface for SQLite operations, allowing for different implementations
  * (Node.js sqlite3 or binary execution)
@@ -44,11 +42,6 @@ export interface SQLiteExecutor {
    * Close the database connection
    */
   close(): Promise<void>;
-  
-  /**
-   * Get the raw database object (for node.js implementation)
-   */
-  getDatabase(): sqlite3.Database;
 }
 
 /**

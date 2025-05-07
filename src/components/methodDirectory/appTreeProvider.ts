@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { MissingDbError } from '../../state/db/sqlite3Connection';
+import { MissingDbError } from '../../state/db/sqliteConnection';
 import { DirNodeData, FileNodeData, ClassNodeData, MethodNodeData, DefinedClassNodeData, NodeData } from './generators/nodeData';
 import { TreeItemFactory } from '../methodDirectory/treeItemFactory';
 import { reloadEventEmitter } from '../../eventEmitter';
