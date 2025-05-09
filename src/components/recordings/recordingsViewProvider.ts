@@ -33,7 +33,17 @@ export class RecordingsTreeProvider implements vscode.TreeDataProvider<string> {
     });
   }
 
-  getChildren(dbPath?: string): Thenable<string[]> {
+  async getChildren(dbPath?: string): Promise<string[]> {
+    // Check if the database directory exists before trying to read it
+    try {
+      const dbDirStat = await vscode.workspace.fs.stat(vscode.Uri.file(this.config.getDbDir()));
+      if (!(dbDirStat.type & vscode.FileType.Directory)) {
+        return Promise.resolve([]);
+      }
+    } catch (error) {
+      // Directory doesn't exist or can't be accessed
+      return Promise.resolve([]);
+    }
     if (dbPath) {
       return Promise.resolve([]);
     } else {

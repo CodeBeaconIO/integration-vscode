@@ -15,3 +15,4 @@ vsc-extension-quickstart.md
 .tool-versions
 ruby-flow-*.vsix
 code-beacon-*.vsix
+node_modules/**

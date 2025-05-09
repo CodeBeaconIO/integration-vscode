@@ -15,7 +15,7 @@ export class AppTreeProvider implements vscode.TreeDataProvider<NodeData> {
 
   constructor() {
     this.appTree = new AppTree();
-    this._populate = this.populateData();
+    this._populate = Promise.resolve();
     reloadEventEmitter.event(() => {
       this._dataPopulated = false;
       this.appTree = new AppTree();
@@ -30,6 +30,9 @@ export class AppTreeProvider implements vscode.TreeDataProvider<NodeData> {
   }
 
   async getChildren(element?: NodeData): Promise<NodeData[]> {
+    if (this._initialLoad) {
+      return Promise.resolve([]);
+    }
     try {
       if (element) {
         let children = [];
@@ -94,6 +97,8 @@ export class AppTreeProvider implements vscode.TreeDataProvider<NodeData> {
   }
 
   private async populateData(): Promise<void> {
+    vscode.commands.executeCommand('setContext', 'codeBeaconContext.welcome', 'loadingAppTree');
+
     if (this._dataPopulated) {
       return;
     }

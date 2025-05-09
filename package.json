@@ -115,6 +115,11 @@
       {
         "view": "appTree",
         "contents": "Loading...",
+        "when": "codeBeaconContext.welcome == 'loadingAppTree'"
+      },
+      {
+        "view": "appTree",
+        "contents": "Select a trace recording to load method calls.",
         "when": "codeBeaconContext.welcome == 'workspaceFound'"
       },
       {
@@ -126,11 +131,6 @@
         "view": "appTree",
         "contents": "Configure the 'code-beacon.rootDir' setting and restart to enable this extension.",
         "when": "codeBeaconContext.welcome == 'rootNotSet'"
-      },
-      {
-        "view": "appTree",
-        "contents": "Run a trace to activate this extension.",
-        "when": "codeBeaconContext.welcome == 'dbMissing'"
       },
       {
         "view": "appTree",

@@ -34,26 +34,27 @@ export async function activate(context: vscode.ExtensionContext) {
 		SQLiteConnection.getExecutor();
 	} catch (error) {
 		vscode.commands.executeCommand('setContext', 'codeBeaconContext.welcome', 'dbMissing');
-		return; // Don't proceed with activation if database can't be accessed
 	}
 	
-	// Only proceed with full activation if SQLite path is set and database can be accessed
-	const dbManager = new DBManager(config.getRefreshPath());
-	dbManager.registerCommandHandlers();
-	dbManager.startWatching();
-	context.subscriptions.push({
-		dispose: () => {
-			dbManager.stopWatching();
-		}
-	});
-	// const dataPath = '/tmp/call_trace.json';
-	const recordingsDataProvider = new RecordingsTreeProvider();
-	vscode.window.registerTreeDataProvider('recordingsTree', recordingsDataProvider);
-	const appDataProvider = new AppTreeProvider();
-	vscode.window.registerTreeDataProvider('appTree', appDataProvider);
+	function initializeExtension() {
+		const dbManager = new DBManager(config.getRefreshPath());
+		dbManager.registerCommandHandlers();
+		dbManager.startWatching();
+		context.subscriptions.push({
+			dispose: () => {
+				dbManager.stopWatching();
+			}
+		});
+		const recordingsDataProvider = new RecordingsTreeProvider();
+		vscode.window.registerTreeDataProvider('recordingsTree', recordingsDataProvider);
+		const appDataProvider = new AppTreeProvider();
+		vscode.window.registerTreeDataProvider('appTree', appDataProvider);
 
-	const coordinator = new Coordinator(recordingsDataProvider);
-	coordinator.initialize();
+		const coordinator = new Coordinator(recordingsDataProvider);
+		coordinator.initialize();
+	}
+	
+	initializeExtension();
 }
 
 function workspaceExists(): boolean {
