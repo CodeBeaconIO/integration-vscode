@@ -64,9 +64,7 @@ export class DocumentManager {
 
   async revealNodeByUri(uri: vscode.Uri): Promise<vscode.TextEditor[]> {
     const file = new TracedFile(uri);
-    const lineToScrollTo = 1; // Default to first line
-    file.scrollToLine(lineToScrollTo);
-    return EditorUtils.openResource(file.uri, lineToScrollTo, this.docAReg);
+    return EditorUtils.openResource(file.uri, null, this.docAReg);
   }
 
   async openResourceByTreeNode(node: TreeNodeDataAR): Promise<vscode.TextEditor[]> {
@@ -79,7 +77,6 @@ export class DocumentManager {
     const file = new TracedFile(uri);
     const lineNumber = parseInt(node.getLine());
     const lineToScrollTo = isNaN(lineNumber) ? 1 : lineNumber;
-    file.scrollToLine(lineToScrollTo);
     return EditorUtils.openResource(file.uri, lineToScrollTo, this.docAReg);
   }
 
