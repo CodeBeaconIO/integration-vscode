@@ -25,8 +25,14 @@ export class Coordinator {
     this.registerEventHandlers();
   }
 
+  // Check if a database is selected
+  private isDatabaseSelected(): boolean {
+    return !!CurrentState.currentDbUri();
+  }
+
   registerCommandHandlers() {
      vscode.commands.registerCommand('callTree.openFile', (treeNode) => {
+      if (!this.isDatabaseSelected()) { return; };
       TreeNodeDataAR.findById(treeNode.getId()).then((node) => {
         const prevNode = CurrentState.currentNode();
         CurrentState.setCurrentNode(node!);
@@ -34,11 +40,13 @@ export class Coordinator {
       });
     });
     vscode.commands.registerCommand('appTree.openFile', (uri) => {
+      if (!this.isDatabaseSelected()) { return; };
       const prevNode = CurrentState.currentNode();
       CurrentState.setCurrentNode(null);
       fileSelectionEventEmitter.fire({ uri: uri, prevNode: prevNode });
     });
     vscode.commands.registerCommand('appTree.openFileAtLine', (uri, line) => {
+      if (!this.isDatabaseSelected()) { return; };
       const file = new TracedFile(uri);
       this.selectNodeByFileLocation(file, line);
     });
@@ -46,11 +54,13 @@ export class Coordinator {
   
   registerEventHandlers() {
     editorSelectionEventEmitter.event(({ uri, line }) => {
+      if (!this.isDatabaseSelected()) { return; };
       const file = new TracedFile(uri);
       this.selectNodeByFileLocation(file, line);
     });
 
     documentVisibilityChangedEventEmitter.event(({ editors }) => {
+      if (!this.isDatabaseSelected()) { return; };
       const notifyEditors: vscode.TextEditor[] = [];
       for(const editor of editors) {
         const uri = editor.document.uri;

@@ -1,10 +1,17 @@
 import { TreeNodeDataAR } from './activeRecord/treeNodeDataAR';
 import { TracedFile } from '../components/editor/tracedFile';
+import * as vscode from 'vscode';
+import { newDbInstanceEventEmitter } from '../eventEmitter';
 
 export class CurrentState {
   private static _currentNode: TreeNodeDataAR | null = null;
+  private static _currentDbUri: vscode.Uri | null = null;
 
-  constructor() {}
+  constructor() {
+    newDbInstanceEventEmitter.event(({uri}) => {  
+      CurrentState._currentDbUri = uri;
+    });
+  }
 
   static matches(filePath: string): boolean;
   static matches(filePath: string, lineNumber: number): boolean;
@@ -33,5 +40,9 @@ export class CurrentState {
 
   static setCurrentNode(node: TreeNodeDataAR | null): void {
     this._currentNode = node;
+  }
+
+  static currentDbUri(): vscode.Uri | null {
+    return this._currentDbUri;
   }
 }

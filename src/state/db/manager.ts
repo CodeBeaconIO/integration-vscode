@@ -28,8 +28,8 @@ export class DBManager {
 
   registerCommandHandlers() {
     vscode.commands.registerCommand('recordingsTree.loadDb', (dbFileName) => {
-      SQLiteConnection.connect(dbFileName);
-      newDbInstanceEventEmitter.fire();
+      SQLiteConnection.connect(dbFileName); 
+      newDbInstanceEventEmitter.fire({uri: vscode.Uri.file(dbFileName)});
     });
   }
 

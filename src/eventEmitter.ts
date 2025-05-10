@@ -8,5 +8,5 @@ export const documentVisibilityChangedEventEmitter = new vscode.EventEmitter<{ e
 export const fileVisibilityEventEmitter = new vscode.EventEmitter<{ editors: vscode.TextEditor[] }>();
 export const treeConfigUpdatedEventEmitter = new vscode.EventEmitter<void>();
 export const newDbEventEmitter = new vscode.EventEmitter<{ uri: vscode.Uri}>();
-export const newDbInstanceEventEmitter = new vscode.EventEmitter<void>();
+export const newDbInstanceEventEmitter = new vscode.EventEmitter<{uri: vscode.Uri}>();
 export const reloadEventEmitter = new vscode.EventEmitter<void>();
