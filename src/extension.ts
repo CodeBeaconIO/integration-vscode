@@ -8,6 +8,7 @@ import { Coordinator } from './coordinator';
 import { DBManager } from './state/db/manager';
 import { SQLiteConnection } from './state/db/sqliteConnection';
 import { SqliteSetupService } from './services/sqlite/sqliteSetupService';
+import { RemoteTracingService, StatusBarProvider, TreeViewActions, CommandHandlers } from './components/remoteTracing';
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -59,20 +60,22 @@ export async function activate(context: vscode.ExtensionContext) {
 
 		const coordinator = new Coordinator(recordingsDataProvider);
 		coordinator.initialize();
+		
+		// Initialize remote tracing components
+		const remoteTracingService = new RemoteTracingService(config);
+		const statusBarProvider = new StatusBarProvider(remoteTracingService);
+		const treeViewActions = new TreeViewActions(remoteTracingService, statusBarProvider);
+		const commandHandlers = new CommandHandlers(remoteTracingService, statusBarProvider);
+		
+		// Register all remote tracing commands
+		commandHandlers.registerCommands(context);
+		treeViewActions.registerCommands(context);
+		
+		// Add status bar to disposables
+		context.subscriptions.push(statusBarProvider);
 	}
 	
 	initializeExtension();
-
-	// Add a command to toggle tracing
-	vscode.commands.registerCommand('codeBeacon.toggleTracing', async () => {
-		const config = vscode.workspace.getConfiguration('code-beacon');
-		const currentSetting = config.get('tracingEnabled', true);
-		await config.update('tracingEnabled', !currentSetting, vscode.ConfigurationTarget.Global);
-		vscode.window.showInformationMessage(`Tracing is now ${!currentSetting ? 'enabled' : 'disabled'}.`);
-	});
-
-	// Register the new command
-	context.subscriptions.push(vscode.commands.registerCommand('codeBeacon.toggleTracing', () => {}));
 }
 
 function workspaceExists(): boolean {

@@ -61,6 +61,21 @@
           "type": "boolean",
           "default": true,
           "description": "Enable or disable tracing of code execution paths."
+        },
+        "code-beacon.remoteTracing.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable remote tracing communication with Ruby gem"
+        },
+        "code-beacon.remoteTracing.configFile": {
+          "type": "string",
+          "default": "tracer_config.yml",
+          "description": "Configuration file name for remote tracing"
+        },
+        "code-beacon.remoteTracing.autoRefresh": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically refresh when remote tracing state changes"
         }
       }
     },
@@ -68,6 +83,47 @@
       {
         "command": "code-beacon.openFile",
         "title": "Open File"
+      },
+      {
+        "command": "codeBeacon.toggleRemoteTracing",
+        "title": "Toggle Remote Tracing",
+        "category": "Code Beacon",
+        "icon": "$(record)"
+      },
+      {
+        "command": "codeBeacon.enableRemoteTracing",
+        "title": "Enable Remote Tracing",
+        "category": "Code Beacon",
+        "icon": "$(record)"
+      },
+      {
+        "command": "codeBeacon.disableRemoteTracing",
+        "title": "Disable Remote Tracing",
+        "category": "Code Beacon",
+        "icon": "$(circle-large-outline)"
+      },
+      {
+        "command": "codeBeacon.showRemoteTracingStatus",
+        "title": "Show Remote Tracing Status",
+        "category": "Code Beacon",
+        "icon": "$(info)"
+      },
+      {
+        "command": "codeBeacon.openRemoteTracingConfig",
+        "title": "Open Remote Tracing Configuration",
+        "category": "Code Beacon",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "codeBeacon.validateRemoteTracingConfig",
+        "title": "Validate Remote Tracing Configuration",
+        "category": "Code Beacon",
+        "icon": "$(check)"
+      },
+      {
+        "command": "codeBeacon.toggleRemoteTracingFromTree",
+        "title": "Toggle Remote Tracing",
+        "icon": "$(record)"
       }
     ],
     "viewsContainers": {
@@ -142,7 +198,21 @@
         "contents": "SQLite binary path is not configured. Please set the 'code-beacon.sqliteBinaryPath' setting. If you configure this directly in the settings, you will need to reload VS Code for changes to take effect.",
         "when": "codeBeaconContext.welcome == 'sqlitePathNotSet'"
       }
-    ]
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "codeBeacon.toggleRemoteTracingFromTree",
+          "when": "view == recordingsTree",
+          "group": "navigation"
+        },
+        {
+          "command": "codeBeacon.showRemoteTracingStatus",
+          "when": "view == recordingsTree",
+          "group": "navigation"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",

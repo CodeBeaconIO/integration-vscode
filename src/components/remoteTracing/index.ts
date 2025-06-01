@@ -7,6 +7,9 @@
 
 export { RemoteTracingService } from './remoteTracingService';
 export { ConfigFileManager } from './configFileManager';
+export { StatusBarProvider } from './statusBarProvider';
+export { TreeViewActions } from './treeViewActions';
+export { CommandHandlers } from './commandHandlers';
 export { 
   TracerConfig, 
   TracerFilters, 
