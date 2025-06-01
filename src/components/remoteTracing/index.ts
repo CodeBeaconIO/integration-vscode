@@ -1,0 +1,15 @@
+/**
+ * Remote Tracing Module
+ * 
+ * Provides file-based communication between VS Code extension and Ruby gem
+ * for controlling remote tracing functionality.
+ */
+
+export { RemoteTracingService } from './remoteTracingService';
+export { ConfigFileManager } from './configFileManager';
+export { 
+  TracerConfig, 
+  TracerFilters, 
+  DEFAULT_TRACER_CONFIG, 
+  TRACER_CONFIG_FILENAME 
+} from './types'; 

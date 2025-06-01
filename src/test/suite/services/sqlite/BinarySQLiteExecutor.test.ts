@@ -61,7 +61,11 @@ suite('BinarySQLiteExecutor', function() {
       getDbPath: () => '',
       getRefreshPath: () => '',
       getRootDir: () => '',
-      getPathsPath: () => ''
+      getPathsPath: () => '',
+      getTracingEnabled: () => true,
+      getRemoteTracingConfigPath: () => '',
+      getRemoteTracingEnabled: () => false,
+      setRemoteTracingEnabled: async () => {}
     });
   });
 

@@ -36,6 +36,13 @@ export async function activate(context: vscode.ExtensionContext) {
 		vscode.commands.executeCommand('setContext', 'codeBeaconContext.welcome', 'dbMissing');
 	}
 	
+	// Check if tracing is enabled before initializing the extension
+	const tracingEnabled = vscode.workspace.getConfiguration('code-beacon').get('tracingEnabled', true);
+	if (!tracingEnabled) {
+		vscode.window.showInformationMessage('Tracing is disabled. Enable it in settings to start tracing.');
+		return;
+	}
+	
 	function initializeExtension() {
 		const dbManager = new DBManager(config.getRefreshPath());
 		dbManager.registerCommandHandlers();
@@ -55,6 +62,17 @@ export async function activate(context: vscode.ExtensionContext) {
 	}
 	
 	initializeExtension();
+
+	// Add a command to toggle tracing
+	vscode.commands.registerCommand('codeBeacon.toggleTracing', async () => {
+		const config = vscode.workspace.getConfiguration('code-beacon');
+		const currentSetting = config.get('tracingEnabled', true);
+		await config.update('tracingEnabled', !currentSetting, vscode.ConfigurationTarget.Global);
+		vscode.window.showInformationMessage(`Tracing is now ${!currentSetting ? 'enabled' : 'disabled'}.`);
+	});
+
+	// Register the new command
+	context.subscriptions.push(vscode.commands.registerCommand('codeBeacon.toggleTracing', () => {}));
 }
 
 function workspaceExists(): boolean {

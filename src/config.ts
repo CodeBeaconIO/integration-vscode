@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import { TRACER_CONFIG_FILENAME } from './components/remoteTracing/types';
 
 export interface IConfig {
   getDataDir(): string;
@@ -9,6 +10,10 @@ export interface IConfig {
   getRootDir(): string;
   getPathsPath(): string;
   getSqliteBinaryPath(): string;
+  getTracingEnabled(): boolean;
+  getRemoteTracingConfigPath(): string;
+  getRemoteTracingEnabled(): boolean;
+  setRemoteTracingEnabled(enabled: boolean): Promise<void>;
 }
 
 export class Config implements IConfig {
@@ -48,6 +53,22 @@ export class Config implements IConfig {
 
   getSqliteBinaryPath(): string {
     return this.workspaceConfig.get('code-beacon.sqliteBinaryPath', '');
+  }
+
+  getTracingEnabled(): boolean {
+    return this.workspaceConfig.get('code-beacon.tracingEnabled', true);
+  }
+
+  getRemoteTracingConfigPath(): string {
+    return path.resolve(this.getDataDir(), TRACER_CONFIG_FILENAME);
+  }
+
+  getRemoteTracingEnabled(): boolean {
+    return this.workspaceConfig.get('code-beacon.remoteTracing.enabled', false);
+  }
+
+  async setRemoteTracingEnabled(enabled: boolean): Promise<void> {
+    await this.workspaceConfig.update('code-beacon.remoteTracing.enabled', enabled, vscode.ConfigurationTarget.Workspace);
   }
 }
 

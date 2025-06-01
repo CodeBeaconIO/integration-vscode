@@ -1,0 +1,11 @@
+tracing_enabled: false
+last_updated: '2024-06-01T21:03:00.000Z'
+source: vscode-extension
+version: '1.0'
+filters:
+  include_paths:
+    - app/
+    - lib/
+  exclude_patterns:
+    - '*_spec.rb'
+    - '*_test.rb' 
