@@ -25,69 +25,37 @@ export class RemoteTracingService {
 
   /**
    * Checks if remote tracing is currently enabled
+   * Returns false if configuration is invalid
    */
   async isTracingEnabled(): Promise<boolean> {
-    const config = await this.getCurrentConfig();
-    return config.tracing_enabled;
+    try {
+      const config = await this.getCurrentConfig();
+      return config.tracing_enabled;
+    } catch (error) {
+      // Configuration is invalid, consider tracing disabled
+      return false;
+    }
   }
 
   /**
    * Enables remote tracing
    */
   async enableTracing(): Promise<void> {
-    try {
-      await this.configFileManager.updateTracingEnabled(true);
-      vscode.window.showInformationMessage('Remote tracing enabled - Ruby gem will start tracing');
-    } catch (error) {
-      const errorMessage = `Failed to enable remote tracing: ${error}`;
-      console.error(errorMessage);
-      vscode.window.showErrorMessage(errorMessage);
-      throw error;
-    }
+    await this.configFileManager.updateTracingEnabled(true);
   }
 
   /**
    * Disables remote tracing
    */
   async disableTracing(): Promise<void> {
-    try {
-      await this.configFileManager.updateTracingEnabled(false);
-      vscode.window.showInformationMessage('Remote tracing disabled - existing traces remain available');
-    } catch (error) {
-      const errorMessage = `Failed to disable remote tracing: ${error}`;
-      console.error(errorMessage);
-      vscode.window.showErrorMessage(errorMessage);
-      throw error;
-    }
-  }
-
-  /**
-   * Toggles remote tracing state
-   */
-  async toggleTracing(): Promise<boolean> {
-    const currentlyEnabled = await this.isTracingEnabled();
-    
-    if (currentlyEnabled) {
-      await this.disableTracing();
-      return false;
-    } else {
-      await this.enableTracing();
-      return true;
-    }
+    await this.configFileManager.updateTracingEnabled(false);
   }
 
   /**
    * Updates the entire configuration
    */
   async updateConfig(config: TracerConfig): Promise<void> {
-    try {
-      await this.configFileManager.writeConfig(config);
-    } catch (error) {
-      const errorMessage = `Failed to update remote tracing configuration: ${error}`;
-      console.error(errorMessage);
-      vscode.window.showErrorMessage(errorMessage);
-      throw error;
-    }
+    await this.configFileManager.writeConfig(config);
   }
 
   /**
@@ -102,13 +70,45 @@ export class RemoteTracingService {
    */
   async validateConfiguration(): Promise<boolean> {
     try {
-      // Try to read the configuration
       await this.getCurrentConfig();
       return true;
     } catch (error) {
-      console.error('Configuration validation failed:', error);
-      vscode.window.showErrorMessage('Failed to communicate with Ruby gem - check configuration');
       return false;
+    }
+  }
+
+  /**
+   * Creates an example configuration file
+   */
+  async createExampleConfig(): Promise<string> {
+    return await this.configFileManager.createExampleConfig();
+  }
+
+  /**
+   * Handles configuration errors by showing a simple dialog
+   */
+  async handleConfigError(error: string): Promise<void> {
+    const action = await vscode.window.showErrorMessage(
+      `Remote tracing configuration error: ${error}`,
+      'Open Example File',
+      'Open Config File'
+    );
+
+    if (action === 'Open Example File') {
+      try {
+        const examplePath = await this.createExampleConfig();
+        const uri = vscode.Uri.file(examplePath);
+        await vscode.window.showTextDocument(uri);
+      } catch (err) {
+        vscode.window.showErrorMessage(`Failed to create example file: ${err}`);
+      }
+    } else if (action === 'Open Config File') {
+      try {
+        const uri = vscode.Uri.file(this.getConfigPath());
+        await vscode.window.showTextDocument(uri);
+      } catch (err) {
+        vscode.window.showErrorMessage(`Failed to open config file: ${err}`);
+      }
     }
   }
 } 

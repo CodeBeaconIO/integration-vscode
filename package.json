@@ -103,27 +103,15 @@
         "icon": "$(circle-large-outline)"
       },
       {
-        "command": "codeBeacon.showRemoteTracingStatus",
-        "title": "Show Remote Tracing Status",
-        "category": "Code Beacon",
-        "icon": "$(info)"
-      },
-      {
         "command": "codeBeacon.openRemoteTracingConfig",
         "title": "Open Remote Tracing Configuration",
         "category": "Code Beacon",
         "icon": "$(gear)"
       },
       {
-        "command": "codeBeacon.validateRemoteTracingConfig",
-        "title": "Validate Remote Tracing Configuration",
-        "category": "Code Beacon",
-        "icon": "$(check)"
-      },
-      {
-        "command": "codeBeacon.toggleRemoteTracingFromTree",
-        "title": "Toggle Remote Tracing",
-        "icon": "$(record)"
+        "command": "codeBeacon.handleRemoteTracingError",
+        "title": "Handle Remote Tracing Error",
+        "category": "Code Beacon"
       }
     ],
     "viewsContainers": {
@@ -202,12 +190,12 @@
     "menus": {
       "view/title": [
         {
-          "command": "codeBeacon.toggleRemoteTracingFromTree",
+          "command": "codeBeacon.toggleRemoteTracing",
           "when": "view == recordingsTree",
           "group": "navigation"
         },
         {
-          "command": "codeBeacon.showRemoteTracingStatus",
+          "command": "codeBeacon.openRemoteTracingConfig",
           "when": "view == recordingsTree",
           "group": "navigation"
         }

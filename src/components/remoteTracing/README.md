@@ -48,9 +48,6 @@ const service = new RemoteTracingService(config);
 // Check current state
 const isEnabled = await service.isTracingEnabled();
 
-// Toggle tracing
-const newState = await service.toggleTracing();
-
 // Enable/disable explicitly
 await service.enableTracing();
 await service.disableTracing();
@@ -75,7 +72,6 @@ src/components/remoteTracing/
 Comprehensive test suite covers:
 - Configuration file creation and validation
 - Enable/disable functionality
-- Toggle operations
 - Error handling
 - File I/O operations
 

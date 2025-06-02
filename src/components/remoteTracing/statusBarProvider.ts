@@ -1,79 +1,63 @@
 import * as vscode from 'vscode';
-import { RemoteTracingService } from './remoteTracingService';
 
 /**
  * Provides status bar integration for remote tracing
- * Shows current tracing state and allows quick toggle
+ * Shows current tracing state and allows specific enable/disable actions
  */
 export class StatusBarProvider {
   private statusBarItem: vscode.StatusBarItem;
-  private remoteTracingService: RemoteTracingService;
 
-  constructor(remoteTracingService: RemoteTracingService) {
-    this.remoteTracingService = remoteTracingService;
-    
-    // Create status bar item
+  constructor() {
     this.statusBarItem = vscode.window.createStatusBarItem(
       vscode.StatusBarAlignment.Left,
-      100 // Priority - higher numbers appear more to the left
+      100
     );
-    
-    // Set up the status bar item
-    this.statusBarItem.command = 'codeBeacon.toggleRemoteTracing';
-    this.statusBarItem.tooltip = 'Click to toggle remote tracing';
-    
-    // Show the status bar item
     this.statusBarItem.show();
-    
-    // Initialize the display
-    this.updateDisplay();
   }
 
-  /**
-   * Updates the status bar display based on current tracing state
-   */
-  async updateDisplay(): Promise<void> {
+  async updateDisplay(enable: boolean | undefined = undefined): Promise<void> {
     try {
-      const isEnabled = await this.remoteTracingService.isTracingEnabled();
-      
-      if (isEnabled) {
-        this.statusBarItem.text = '$(record) Remote Tracing: ON';
-        this.statusBarItem.backgroundColor = undefined; // Default background
-        this.statusBarItem.color = '#ff6b6b'; // Red color for active
-        this.statusBarItem.tooltip = 'Remote tracing is active. Click to disable.';
+      if (enable) {
+        this.setEnabledState();
       } else {
-        this.statusBarItem.text = '$(circle-large-outline) Remote Tracing: OFF';
-        this.statusBarItem.backgroundColor = undefined;
-        this.statusBarItem.color = '#6c757d'; // Gray color for inactive
-        this.statusBarItem.tooltip = 'Remote tracing is inactive. Click to enable.';
+        this.setDisabledState();
       }
     } catch (error) {
-      // Error state
-      this.statusBarItem.text = '$(warning) Remote Tracing: ERROR';
-      this.statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
-      this.statusBarItem.color = undefined;
-      this.statusBarItem.tooltip = `Remote tracing error: ${error}. Click to retry.`;
+      this.setErrorState();
     }
   }
 
   /**
-   * Handles the toggle command
+   * Sets the status bar to show error state for configuration issues
    */
-  async handleToggle(): Promise<void> {
-    try {
-      const newState = await this.remoteTracingService.toggleTracing();
-      await this.updateDisplay();
-      
-      // Show feedback message
-      const message = newState 
-        ? 'Remote tracing enabled - Ruby gem will start tracing'
-        : 'Remote tracing disabled - existing traces remain available';
-      vscode.window.showInformationMessage(message);
-      
-    } catch (error) {
-      await this.updateDisplay();
-      vscode.window.showErrorMessage(`Failed to toggle remote tracing: ${error}`);
-    }
+  setErrorState(): void {
+    this.statusBarItem.text = '$(warning) Remote Tracing: ERROR';
+    this.statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
+    this.statusBarItem.color = undefined;
+    this.statusBarItem.command = 'codeBeacon.handleRemoteTracingError';
+    this.statusBarItem.tooltip = 'Remote tracing configuration error. Click to fix.';
+  }
+
+  /**
+   * Sets the status bar to show enabled state
+   */
+  private setEnabledState(): void {
+    this.statusBarItem.text = '$(record) Remote Tracing: ON';
+    this.statusBarItem.backgroundColor = undefined; // Default background
+    this.statusBarItem.color = '#ff6b6b'; // Red color for active
+    this.statusBarItem.command = 'codeBeacon.disableRemoteTracing'; // Specific disable command
+    this.statusBarItem.tooltip = 'Remote tracing is active. Click to disable.';
+  }
+
+  /**
+   * Sets the status bar to show disabled state
+   */
+  private setDisabledState(): void {
+    this.statusBarItem.text = '$(circle-large-outline) Remote Tracing: OFF';
+    this.statusBarItem.backgroundColor = undefined;
+    this.statusBarItem.color = '#6c757d'; // Gray color for inactive
+    this.statusBarItem.command = 'codeBeacon.enableRemoteTracing'; // Specific enable command
+    this.statusBarItem.tooltip = 'Remote tracing is inactive. Click to enable.';
   }
 
   /**

@@ -63,8 +63,11 @@ export async function activate(context: vscode.ExtensionContext) {
 		
 		// Initialize remote tracing components
 		const remoteTracingService = new RemoteTracingService(config);
-		const statusBarProvider = new StatusBarProvider(remoteTracingService);
-		const treeViewActions = new TreeViewActions(remoteTracingService, statusBarProvider);
+		const statusBarProvider = new StatusBarProvider();
+		remoteTracingService.isTracingEnabled().then(isTracingEnabled => {
+			statusBarProvider.updateDisplay(isTracingEnabled);
+		});
+		const treeViewActions = new TreeViewActions();
 		const commandHandlers = new CommandHandlers(remoteTracingService, statusBarProvider);
 		
 		// Register all remote tracing commands

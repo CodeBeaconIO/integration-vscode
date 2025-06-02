@@ -16,6 +16,7 @@ export class ConfigFileManager {
   /**
    * Reads the configuration file and returns parsed config
    * Creates default config if file doesn't exist
+   * Throws error if file is invalid
    */
   async readConfig(): Promise<TracerConfig> {
     try {
@@ -34,15 +35,35 @@ export class ConfigFileManager {
       const fileContent = await vscode.workspace.fs.readFile(configUri);
       const yamlContent = Buffer.from(fileContent).toString('utf8');
       
-      const parsedConfig = yaml.load(yamlContent) as TracerConfig;
+      let parsedConfig: unknown;
+      try {
+        parsedConfig = yaml.load(yamlContent);
+      } catch (yamlError) {
+        throw new Error(`Invalid YAML syntax: ${yamlError instanceof Error ? yamlError.message : String(yamlError)}`);
+      }
       
-      // Validate and merge with defaults
-      return this.validateAndMergeConfig(parsedConfig);
+      // Basic validation
+      if (!parsedConfig || typeof parsedConfig !== 'object') {
+        throw new Error('Configuration must be a valid object');
+      }
+
+      const configObj = parsedConfig as Record<string, unknown>;
+      
+      if (typeof configObj.tracing_enabled !== 'boolean') {
+        throw new Error('tracing_enabled must be a boolean (true or false)');
+      }
+
+      // Return valid config with defaults for missing fields
+      return {
+        tracing_enabled: configObj.tracing_enabled,
+        last_updated: typeof configObj.last_updated === 'string' ? configObj.last_updated : new Date().toISOString(),
+        source: typeof configObj.source === 'string' ? configObj.source : 'vscode-extension',
+        version: typeof configObj.version === 'string' ? configObj.version : '1.0',
+        filters: this.parseFilters(configObj.filters)
+      };
       
     } catch (error) {
-      console.error('Error reading tracer config:', error);
-      // Return default config on error
-      return DEFAULT_TRACER_CONFIG;
+      throw error;
     }
   }
 
@@ -95,37 +116,55 @@ export class ConfigFileManager {
   }
 
   /**
-   * Validates configuration and merges with defaults
+   * Creates a valid example configuration file
    */
-  private validateAndMergeConfig(config: unknown): TracerConfig {
-    if (!config || typeof config !== 'object') {
-      return DEFAULT_TRACER_CONFIG;
-    }
-
-    const configObj = config as Record<string, unknown>;
-
-    return {
-      tracing_enabled: typeof configObj.tracing_enabled === 'boolean' ? configObj.tracing_enabled : DEFAULT_TRACER_CONFIG.tracing_enabled,
-      last_updated: typeof configObj.last_updated === 'string' ? configObj.last_updated : DEFAULT_TRACER_CONFIG.last_updated,
-      source: typeof configObj.source === 'string' ? configObj.source : DEFAULT_TRACER_CONFIG.source,
-      version: typeof configObj.version === 'string' ? configObj.version : DEFAULT_TRACER_CONFIG.version,
-      filters: this.validateFilters(configObj.filters)
+  async createExampleConfig(): Promise<string> {
+    const examplePath = `${this.configPath}.example`;
+    const exampleConfig: TracerConfig = {
+      ...DEFAULT_TRACER_CONFIG,
+      last_updated: new Date().toISOString()
     };
+
+    const yamlContent = yaml.dump(exampleConfig, {
+      indent: 2,
+      lineWidth: 80,
+      noRefs: true
+    });
+
+    // Add helpful comments
+    const commentedYaml = `# Code Beacon Remote Tracing Configuration
+# This file controls communication between VS Code extension and Ruby gem
+#
+# tracing_enabled: Enable/disable remote tracing
+# last_updated: Timestamp of last modification (auto-updated)
+# source: Source of the configuration change (auto-updated)
+# version: Configuration format version
+# filters: Control which files/patterns to include/exclude
+
+${yamlContent}`;
+
+    try {
+      const exampleUri = vscode.Uri.file(examplePath);
+      await vscode.workspace.fs.writeFile(exampleUri, Buffer.from(commentedYaml, 'utf8'));
+      return examplePath;
+    } catch (error) {
+      throw new Error(`Failed to create example config: ${error}`);
+    }
   }
 
   /**
-   * Validates filter configuration
+   * Parse filters with basic validation
    */
-  private validateFilters(filters: unknown): TracerConfig['filters'] {
+  private parseFilters(filters: unknown): TracerConfig['filters'] {
     if (!filters || typeof filters !== 'object') {
       return DEFAULT_TRACER_CONFIG.filters;
     }
 
     const filtersObj = filters as Record<string, unknown>;
-
+    
     return {
-      include_paths: Array.isArray(filtersObj.include_paths) ? filtersObj.include_paths : DEFAULT_TRACER_CONFIG.filters?.include_paths,
-      exclude_patterns: Array.isArray(filtersObj.exclude_patterns) ? filtersObj.exclude_patterns : DEFAULT_TRACER_CONFIG.filters?.exclude_patterns
+      include_paths: Array.isArray(filtersObj.include_paths) ? filtersObj.include_paths as string[] : DEFAULT_TRACER_CONFIG.filters?.include_paths,
+      exclude_patterns: Array.isArray(filtersObj.exclude_patterns) ? filtersObj.exclude_patterns as string[] : DEFAULT_TRACER_CONFIG.filters?.exclude_patterns
     };
   }
 } 
