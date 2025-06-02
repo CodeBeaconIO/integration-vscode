@@ -8,7 +8,7 @@ import { Coordinator } from './coordinator';
 import { DBManager } from './state/db/manager';
 import { SQLiteConnection } from './state/db/sqliteConnection';
 import { SqliteSetupService } from './services/sqlite/sqliteSetupService';
-import { RemoteTracingService, StatusBarProvider, TreeViewActions, CommandHandlers } from './components/remoteTracing';
+import { RemoteTracingService, StatusBarProvider, TreeViewActions, CommandHandlers, ConfigFileWatcher } from './components/remoteTracing';
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -64,18 +64,23 @@ export async function activate(context: vscode.ExtensionContext) {
 		// Initialize remote tracing components
 		const remoteTracingService = new RemoteTracingService(config);
 		const statusBarProvider = new StatusBarProvider();
-		remoteTracingService.isTracingEnabled().then(isTracingEnabled => {
-			statusBarProvider.updateDisplay(isTracingEnabled);
-		});
 		const treeViewActions = new TreeViewActions();
 		const commandHandlers = new CommandHandlers(remoteTracingService, statusBarProvider);
+		
+		// Initialize config file watcher
+		const configFileWatcher = new ConfigFileWatcher(config.getRemoteTracingConfigPath());
+		configFileWatcher.startWatching();
 		
 		// Register all remote tracing commands
 		commandHandlers.registerCommands(context);
 		treeViewActions.registerCommands(context);
-		
+		vscode.commands.executeCommand('codeBeacon.initializeRemoteTracing');
+
 		// Add status bar to disposables
 		context.subscriptions.push(statusBarProvider);
+		context.subscriptions.push({
+			dispose: () => configFileWatcher.stopWatching()
+		});
 	}
 	
 	initializeExtension();

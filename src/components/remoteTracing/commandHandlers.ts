@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { RemoteTracingService } from './remoteTracingService';
 import { StatusBarProvider } from './statusBarProvider';
+import { remoteTracingConfigChangedEventEmitter } from '../../eventEmitter';
 
 /**
  * Handles all remote tracing commands for the command palette
@@ -12,6 +13,11 @@ export class CommandHandlers {
   constructor(remoteTracingService: RemoteTracingService, statusBarProvider?: StatusBarProvider) {
     this.remoteTracingService = remoteTracingService;
     this.statusBarProvider = statusBarProvider;
+    
+    // Set up event listener for config file changes
+    remoteTracingConfigChangedEventEmitter.event(() => {
+      this.handleInitialize();
+    });
   }
 
   /**
@@ -19,22 +25,27 @@ export class CommandHandlers {
    */
   registerCommands(context: vscode.ExtensionContext): void {
     const commands = [
+      vscode.commands.registerCommand(
+        'codeBeacon.initializeRemoteTracing',
+        () => this.handleInitialize()
+      ),
+
       // Main toggle command
       vscode.commands.registerCommand(
         'codeBeacon.toggleRemoteTracing',
         () => this.handleToggle()
       ),
 
-      // Explicit enable command
+      // Explicit allow command
       vscode.commands.registerCommand(
-        'codeBeacon.enableRemoteTracing',
-        () => this.handleEnable()
+        'codeBeacon.allowRemoteTracing',
+        () => this.handleAllow()
       ),
 
-      // Explicit disable command
+      // Explicit block command
       vscode.commands.registerCommand(
-        'codeBeacon.disableRemoteTracing',
-        () => this.handleDisable()
+        'codeBeacon.blockRemoteTracing',
+        () => this.handleBlock()
       ),
 
       // Open config file command
@@ -59,30 +70,51 @@ export class CommandHandlers {
     }
   }
 
+  async handleInitialize(): Promise<void> {
+    if ( await this.remoteTracingService.validateConfiguration() ) {
+      const isCurrentlyEnabled = await this.remoteTracingService.isTracingEnabled();
+
+      if (isCurrentlyEnabled) {
+        this.updateUIContext('allowed');
+        await this.updateStatusBar(true);
+      } else {
+        this.updateUIContext('blocked');
+        await this.updateStatusBar(false);
+      }
+    } else {
+      this.updateUIContext('error');
+      await this.handleConfigError('error');
+    }
+  }
+
   private async handleToggle(): Promise<void> {
       const isCurrentlyEnabled = await this.remoteTracingService.isTracingEnabled();
 
       if (isCurrentlyEnabled) {
-        await this.handleDisable();
+        await this.handleBlock();
       } else {
-        await this.handleEnable();
+        await this.handleAllow();
     }
   }
 
-  private async handleEnable(): Promise<void> {
+  private async handleAllow(): Promise<void> {
     try {
       await this.remoteTracingService.enableTracing();
       await this.updateStatusBar(true);
+      this.updateUIContext('allowed');
     } catch (error) {
+      this.updateUIContext('error');
       await this.handleConfigError(error);
     }
   }
 
-  private async handleDisable(): Promise<void> {
+  private async handleBlock(): Promise<void> {
     try {
       await this.remoteTracingService.disableTracing();
       await this.updateStatusBar(false);
+      this.updateUIContext('blocked');
     } catch (error) {
+      this.updateUIContext('error');
       await this.handleConfigError(error);
     }
   }
@@ -131,5 +163,9 @@ export class CommandHandlers {
     } catch (error) {
       await this.handleConfigError(error);
     }
+  }
+
+  private updateUIContext(state: 'allowed' | 'blocked' | 'error') {
+    vscode.commands.executeCommand('setContext', 'codeBeacon.remoteTracing.state', state);
   }
 } 

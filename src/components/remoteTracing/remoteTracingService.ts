@@ -38,14 +38,14 @@ export class RemoteTracingService {
   }
 
   /**
-   * Enables remote tracing
+   * Allows remote tracing
    */
   async enableTracing(): Promise<void> {
     await this.configFileManager.updateTracingEnabled(true);
   }
 
   /**
-   * Disables remote tracing
+   * Blocks remote tracing
    */
   async disableTracing(): Promise<void> {
     await this.configFileManager.updateTracingEnabled(false);

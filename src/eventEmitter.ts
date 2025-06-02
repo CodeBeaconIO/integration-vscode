@@ -10,3 +10,4 @@ export const treeConfigUpdatedEventEmitter = new vscode.EventEmitter<void>();
 export const newDbEventEmitter = new vscode.EventEmitter<{ uri: vscode.Uri}>();
 export const newDbInstanceEventEmitter = new vscode.EventEmitter<{uri: vscode.Uri}>();
 export const reloadEventEmitter = new vscode.EventEmitter<void>();
+export const remoteTracingConfigChangedEventEmitter = new vscode.EventEmitter<void>();

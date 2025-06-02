@@ -65,7 +65,7 @@
         "code-beacon.remoteTracing.enabled": {
           "type": "boolean",
           "default": false,
-          "description": "Enable remote tracing communication with Ruby gem"
+          "description": "Allow the Ruby gem to perform tracing (VS Code acts as a permission gate)"
         },
         "code-beacon.remoteTracing.configFile": {
           "type": "string",
@@ -81,26 +81,22 @@
     },
     "commands": [
       {
-        "command": "code-beacon.openFile",
-        "title": "Open File"
-      },
-      {
         "command": "codeBeacon.toggleRemoteTracing",
         "title": "Toggle Remote Tracing",
         "category": "Code Beacon",
-        "icon": "$(record)"
+        "icon": "$(shield)"
       },
       {
-        "command": "codeBeacon.enableRemoteTracing",
-        "title": "Enable Remote Tracing",
+        "command": "codeBeacon.allowRemoteTracing",
+        "title": "Allow Remote Tracing",
         "category": "Code Beacon",
-        "icon": "$(record)"
+        "icon": "$(play-circle)"
       },
       {
-        "command": "codeBeacon.disableRemoteTracing",
-        "title": "Disable Remote Tracing",
+        "command": "codeBeacon.blockRemoteTracing",
+        "title": "Block Remote Tracing",
         "category": "Code Beacon",
-        "icon": "$(circle-large-outline)"
+        "icon": "$(stop-circle)"
       },
       {
         "command": "codeBeacon.openRemoteTracingConfig",
@@ -110,8 +106,9 @@
       },
       {
         "command": "codeBeacon.handleRemoteTracingError",
-        "title": "Handle Remote Tracing Error",
-        "category": "Code Beacon"
+        "title": "Handle Remote Tracing ConfigurationError",
+        "category": "Code Beacon",
+        "icon": "$(warning)"
       }
     ],
     "viewsContainers": {
@@ -190,8 +187,18 @@
     "menus": {
       "view/title": [
         {
-          "command": "codeBeacon.toggleRemoteTracing",
-          "when": "view == recordingsTree",
+          "command": "codeBeacon.allowRemoteTracing",
+          "when": "view == recordingsTree && codeBeacon.remoteTracing.state == 'blocked'",
+          "group": "navigation"
+        },
+        {
+          "command": "codeBeacon.blockRemoteTracing",
+          "when": "view == recordingsTree && codeBeacon.remoteTracing.state == 'allowed'",
+          "group": "navigation"
+        },
+        {
+          "command": "codeBeacon.handleRemoteTracingError",
+          "when": "view == recordingsTree && codeBeacon.remoteTracing.state == 'error'",
           "group": "navigation"
         },
         {
