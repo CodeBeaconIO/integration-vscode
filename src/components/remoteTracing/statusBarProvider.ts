@@ -43,7 +43,13 @@ export class StatusBarProvider {
    * Sets the status bar to show enabled state
    */
   private setEnabledState(): void {
-    this.statusBarItem.hide();
+    // this.statusBarItem.hide();
+    this.statusBarItem.show();
+    this.statusBarItem.text = '$(device-camera-video) Tracing Enabled';
+    this.statusBarItem.backgroundColor = undefined;
+    this.statusBarItem.color = undefined;
+    this.statusBarItem.command = 'codeBeacon.blockRemoteTracing'; // Specific allow command
+    this.statusBarItem.tooltip = 'CodeBeacon Tracing ENABLED (click to block)';
   }
 
   /**
@@ -51,7 +57,7 @@ export class StatusBarProvider {
    */
   private setDisabledState(): void {
     this.statusBarItem.show();
-    this.statusBarItem.text = '$(stop-circle) Remote Tracing: BLOCKED';
+    this.statusBarItem.text = '$(stop-circle) Tracing Disabled';
     this.statusBarItem.backgroundColor = undefined;
     this.statusBarItem.color = new vscode.ThemeColor('statusBarItem.warningForeground');
     this.statusBarItem.command = 'codeBeacon.allowRemoteTracing'; // Specific allow command
