@@ -27,7 +27,17 @@ export class Config implements IConfig {
   }
 
   getRootDir(): string {
-    return this.workspaceConfig.get('code-beacon.rootDir', process.cwd());
+    const configuredRoot = this.workspaceConfig.get<string>('code-beacon.rootDir', '');
+    if (configuredRoot && configuredRoot.trim() !== '') {
+      return configuredRoot;
+    }
+
+    vscode.commands.executeCommand('setContext', 'codeBeaconContext.welcome', 'rootNotSet');
+
+    // Return an empty string so that any downstream path resolution attempts
+    // will fail fast, ensuring the extension halts until the user completes
+    // the setup workflow.
+    return '';
   }
 
   getDataDir(): string {

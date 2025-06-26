@@ -47,7 +47,7 @@ suite('Config Test Suite', () => {
     assert.strictEqual(config.getPathsPath(), '/test/root/data/paths.yml');
   });
 
-  test('should default getRootDir to cwd', () => {
+  test('should return empty string when rootDir is not configured', () => {
     const emptyConfig = {
       get: (key: string, defaultValue: string) => {
         switch (key) {
@@ -58,7 +58,7 @@ suite('Config Test Suite', () => {
     } as vscode.WorkspaceConfiguration;
 
     const configWithDefaults = new Config(emptyConfig);
-    assert.strictEqual(configWithDefaults.getRootDir(), process.cwd());
+    assert.strictEqual(configWithDefaults.getRootDir(), '');
   });
 
   test('should default getDataDir to [root]/.code-beacon', () => {
