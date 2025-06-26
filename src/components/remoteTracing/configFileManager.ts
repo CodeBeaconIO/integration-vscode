@@ -27,8 +27,12 @@ export class ConfigFileManager {
         await vscode.workspace.fs.stat(configUri);
       } catch (error) {
         // File doesn't exist, create default config
-        await this.writeConfig(DEFAULT_TRACER_CONFIG);
-        return DEFAULT_TRACER_CONFIG;
+        // Clone the default config so callers can safely mutate the object without
+        // affecting the shared DEFAULT_TRACER_CONFIG constant. Using JSON methods
+        // is sufficient here because the structure is simple (no functions or Dates).
+        const defaultConfigCopy: TracerConfig = JSON.parse(JSON.stringify(DEFAULT_TRACER_CONFIG));
+        await this.writeConfig(defaultConfigCopy);
+        return defaultConfigCopy;
       }
 
       // Read and parse the file
@@ -110,9 +114,11 @@ export class ConfigFileManager {
    * Updates only the tracing enabled status
    */
   async updateTracingEnabled(enabled: boolean): Promise<void> {
+    // Avoid mutating the object returned from readConfig (which could be shared
+    // by other callers). Create a shallow copy with the updated flag instead.
     const currentConfig = await this.readConfig();
-    currentConfig.tracing_enabled = enabled;
-    await this.writeConfig(currentConfig);
+    const newConfig: TracerConfig = { ...currentConfig, tracing_enabled: enabled };
+    await this.writeConfig(newConfig);
   }
 
   /**
