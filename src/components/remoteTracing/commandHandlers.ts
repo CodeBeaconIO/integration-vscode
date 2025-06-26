@@ -58,6 +58,11 @@ export class CommandHandlers {
       vscode.commands.registerCommand(
         'codeBeacon.handleRemoteTracingError',
         () => this.handleError()
+      ),
+
+      vscode.commands.registerCommand(
+        'codeBeacon.excludeRecordingLikeThis',
+        (treeItem: vscode.TreeItem) => this.handleExcludeRecordingLikeThis(treeItem)
       )
     ];
 
@@ -167,5 +172,58 @@ export class CommandHandlers {
 
   private updateUIContext(state: 'allowed' | 'blocked' | 'error') {
     vscode.commands.executeCommand('setContext', 'codeBeacon.remoteTracing.state', state);
+  }
+
+  private async handleExcludeRecordingLikeThis(treeItem: vscode.TreeItem): Promise<void> {
+    // Expecting a DbNode from recordings tree – try to read label/description robustly
+    let nameDefault = '';
+    if (typeof treeItem.label === 'string') {
+      nameDefault = treeItem.label;
+    } else if (treeItem.label && typeof (treeItem.label as vscode.TreeItemLabel).label === 'string') {
+      nameDefault = (treeItem.label as vscode.TreeItemLabel).label;
+    }
+
+    const descProp = (treeItem as { description?: unknown }).description;
+    const descDefault = typeof descProp === 'string' ? descProp : '';
+
+    const namePattern = await vscode.window.showInputBox({
+      value: nameDefault,
+      prompt: 'Name pattern - supports * wildcard and other glob patterns'
+    });
+    if (namePattern === undefined) {
+      return; // cancelled
+    }
+
+    const descPattern = await vscode.window.showInputBox({
+      value: descDefault,
+      prompt: 'Description pattern - supports * wildcard and other glob patterns'
+    });
+    if (descPattern === undefined) {
+      return;
+    }
+
+    try {
+      const cfg = await this.remoteTracingService.getCurrentConfig();
+      const newRule = { name: namePattern, description: descPattern } as import('./types').MetaExcludeRule;
+      const filters = cfg.filters ?? {};
+      const rules = filters.recording_meta_exclude ?? [];
+      rules.push(newRule);
+      const newConfig = {
+        ...cfg,
+        filters: {
+          ...filters,
+          recording_meta_exclude: rules
+        }
+      } as import('./types').TracerConfig;
+
+      await this.remoteTracingService.updateConfig(newConfig);
+
+      const action = await vscode.window.showInformationMessage('Exclude rule added. Open config to see all rules.', 'Open Config');
+      if (action === 'Open Config') {
+        await this.handleOpenConfig();
+      }
+    } catch (err) {
+      vscode.window.showErrorMessage(`Failed to add exclude rule: ${err}`);
+    }
   }
 } 

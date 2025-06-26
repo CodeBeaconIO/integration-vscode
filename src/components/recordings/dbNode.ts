@@ -1,36 +1,51 @@
 import * as vscode from 'vscode';
 
 class DbNode extends vscode.TreeItem {
-  name: string;
-  description: string;
-  dbFileName: string;
+  name!: string;
+  fileName!: string;
+  dbPath: string;
 
-  constructor(
-    name: string,
-    description: string,
-    dbFileName: string,
-    // collapsibleState?: vscode.TreeItemCollapsibleState 
-  ) {
-    super(name, vscode.TreeItemCollapsibleState.None);
+  constructor(dbPath: string) {
+    super('', vscode.TreeItemCollapsibleState.None);
+    this.dbPath = dbPath;
+    this.contextValue = 'recording';
+  }
+
+  setName(name: string): void {
     this.name = name;
     this.label = name;
-    this.description = description;
+  }
 
+  setDescription(description: string): void {
+    this.description = description;
+    this.updateTooltip();
+  }
+
+  setFileName(fileName: string): void {
+    this.fileName = fileName;
+    this.updateCommand();
+  }
+
+  private updateTooltip(): void {
+    if (!this.description) { return; }
+    
     let obj;
     try {
-      obj = JSON.parse(description);
+      obj = JSON.parse(this.description as string);
       let markdownDescription = Object.entries(obj)
         .map(([key, value]) => `  "${key}": "${value}"`)
         .join(',\n');
       markdownDescription = `{\n${markdownDescription}\n}`;
       this.tooltip = new vscode.MarkdownString(`\`\`\`json\n${markdownDescription}\n\`\`\``);
     } catch (error) {
-      // this.tooltip = new vscode.MarkdownString(description);
-      this.tooltip = new vscode.MarkdownString(`\`\`\`json\n${description}\n\`\`\``);
+      this.tooltip = new vscode.MarkdownString(`\`\`\`json\n${this.description}\n\`\`\``);
     }
-    this.dbFileName = dbFileName;
-    this.command = { command: 'recordingsTree.loadDb', title: "Load Db", arguments: [this.dbFileName], };
-    // this.contextValue = 'file';
+  }
+
+  private updateCommand(): void {
+    if (this.fileName) {
+      this.command = { command: 'recordingsTree.loadDb', title: "Load Db", arguments: [this.fileName] };
+    }
   }
 }
 

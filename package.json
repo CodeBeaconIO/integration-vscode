@@ -109,6 +109,12 @@
         "title": "Handle Remote Tracing ConfigurationError",
         "category": "Code Beacon",
         "icon": "$(warning)"
+      },
+      {
+        "command": "codeBeacon.excludeRecordingLikeThis",
+        "title": "Exclude Recording Like This",
+        "category": "Code Beacon",
+        "icon": "$(circle-slash)"
       }
     ],
     "viewsContainers": {
@@ -205,6 +211,13 @@
           "command": "codeBeacon.openRemoteTracingConfig",
           "when": "view == recordingsTree",
           "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "codeBeacon.excludeRecordingLikeThis",
+          "when": "view == recordingsTree && viewItem == recording",
+          "group": "inline"
         }
       ]
     }

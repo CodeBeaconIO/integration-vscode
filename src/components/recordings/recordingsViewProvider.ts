@@ -6,9 +6,9 @@ import path from 'path';
 import { MetaDataAR } from '../../state/activeRecord/metaDataAR';
 import { SQLiteExecutorFactory } from '../../services/sqlite/SQLiteExecutorFactory';
 
-export class RecordingsTreeProvider implements vscode.TreeDataProvider<string> {
-  private _onDidChangeTreeData: vscode.EventEmitter<string | undefined | null | void> = new vscode.EventEmitter<string | undefined | null | void>();
-  readonly onDidChangeTreeData: vscode.Event<string | undefined | null | void> = this._onDidChangeTreeData.event;
+export class RecordingsTreeProvider implements vscode.TreeDataProvider<DbNode> {
+  private _onDidChangeTreeData: vscode.EventEmitter<DbNode | undefined | null | void> = new vscode.EventEmitter<DbNode | undefined | null | void>();
+  readonly onDidChangeTreeData: vscode.Event<DbNode | undefined | null | void> = this._onDidChangeTreeData.event;
 
   private config: Config;
 
@@ -19,13 +19,17 @@ export class RecordingsTreeProvider implements vscode.TreeDataProvider<string> {
     });
   }
 
-  getTreeItem(dbPath: string): Thenable<vscode.TreeItem> {
+  getTreeItem(dbNode: DbNode): Thenable<vscode.TreeItem> {
+    const dbPath = dbNode.dbPath;
     const executor = SQLiteExecutorFactory.createExecutor(dbPath);
     MetaDataAR.reconnectDb(executor);
     const metaData = new MetaDataAR(dbPath);
     return metaData.findById(1).then((row) => {
       executor.close();
-      return new DbNode(row.name, row.description, row.dbBasename);
+      dbNode.setName(row.name);
+      dbNode.setDescription(row.description);
+      dbNode.setFileName(row.dbBasename);
+      return dbNode;
     }).catch(() => {
       executor.close();
       const baseName = path.basename(dbPath);
@@ -33,7 +37,7 @@ export class RecordingsTreeProvider implements vscode.TreeDataProvider<string> {
     });
   }
 
-  async getChildren(dbPath?: string): Promise<string[]> {
+  async getChildren(dbNode?: DbNode): Promise<DbNode[]> {
     // Check if the database directory exists before trying to read it
     try {
       const dbDirStat = await vscode.workspace.fs.stat(vscode.Uri.file(this.config.getDbDir()));
@@ -44,7 +48,7 @@ export class RecordingsTreeProvider implements vscode.TreeDataProvider<string> {
       // Directory doesn't exist or can't be accessed
       return Promise.resolve([]);
     }
-    if (dbPath) {
+    if (dbNode) {
       return Promise.resolve([]);
     } else {
       return vscode.workspace.fs.readDirectory(vscode.Uri.file(this.config.getDbDir())).then((dbFiles) => {
@@ -59,7 +63,9 @@ export class RecordingsTreeProvider implements vscode.TreeDataProvider<string> {
           });
         return Promise.all(dbFilePromises).then((dbFilesWithStats) => {
           dbFilesWithStats.sort((a, b) => b.ctime - a.ctime);
-          return dbFilesWithStats.map(file => file.filePath);
+          return dbFilesWithStats.map(file => {
+            return new DbNode(file.filePath);
+          });
         });
       });
     }

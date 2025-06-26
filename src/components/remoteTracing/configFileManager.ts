@@ -58,7 +58,7 @@ export class ConfigFileManager {
         tracing_enabled: configObj.tracing_enabled,
         last_updated: typeof configObj.last_updated === 'string' ? configObj.last_updated : new Date().toISOString(),
         source: typeof configObj.source === 'string' ? configObj.source : 'vscode-extension',
-        version: typeof configObj.version === 'string' ? configObj.version : '1.0',
+        version: typeof configObj.version === 'string' ? configObj.version : '1.1',
         filters: this.parseFilters(configObj.filters)
       };
       
@@ -164,7 +164,15 @@ ${yamlContent}`;
     
     return {
       include_paths: Array.isArray(filtersObj.include_paths) ? filtersObj.include_paths as string[] : DEFAULT_TRACER_CONFIG.filters?.include_paths,
-      exclude_patterns: Array.isArray(filtersObj.exclude_patterns) ? filtersObj.exclude_patterns as string[] : DEFAULT_TRACER_CONFIG.filters?.exclude_patterns
+      exclude_patterns: Array.isArray(filtersObj.exclude_patterns) ? filtersObj.exclude_patterns as string[] : DEFAULT_TRACER_CONFIG.filters?.exclude_patterns,
+      recording_meta_exclude: Array.isArray(filtersObj.recording_meta_exclude)
+        ? (filtersObj.recording_meta_exclude as unknown[])
+            .filter((r): r is { name: string; description: string } =>
+              typeof r === 'object' && r !== null &&
+              typeof (r as { name?: unknown }).name === 'string' &&
+              typeof (r as { description?: unknown }).description === 'string')
+            .map(r => ({ name: r.name, description: r.description }))
+        : DEFAULT_TRACER_CONFIG.filters?.recording_meta_exclude
     };
   }
 } 

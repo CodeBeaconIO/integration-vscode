@@ -1,11 +1,18 @@
 tracing_enabled: false
 last_updated: '2024-06-01T21:03:00.000Z'
 source: vscode-extension
-version: '1.0'
+version: '1.1'
 filters:
   include_paths:
     - app/
     - lib/
   exclude_patterns:
     - '*_spec.rb'
-    - '*_test.rb' 
+    - '*_test.rb'
+  recording_meta_exclude:
+    # Exclude recordings whose name & description match these glob patterns
+    - name: 'health_check#*'      # Filter out all health check endpoints
+      description: '*'            # with any description
+    - name: 'admin#*'             # Filter out admin actions
+      description: '*sensitive*'  # that contain sensitive data
+    

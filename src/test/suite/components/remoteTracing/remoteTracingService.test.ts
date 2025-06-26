@@ -50,7 +50,7 @@ suite('RemoteTracingService', () => {
     
     assert.strictEqual(config.tracing_enabled, false);
     assert.strictEqual(config.source, 'vscode-extension');
-    assert.strictEqual(config.version, '1.0');
+    assert.strictEqual(config.version, '1.1');
     assert.ok(config.filters);
     assert.ok(Array.isArray(config.filters.include_paths));
     assert.ok(Array.isArray(config.filters.exclude_patterns));
@@ -149,7 +149,7 @@ source: true
     const exampleContent = fs.readFileSync(examplePath, 'utf8');
     
     assert.ok(exampleContent.includes('tracing_enabled: false'));
-    assert.ok(exampleContent.includes('version: \'1.0\'') || exampleContent.includes('version: "1.0"'));
+    assert.ok(exampleContent.includes('version: \'1.1\'') || exampleContent.includes('version: "1.1"'));
     assert.ok(exampleContent.includes('# Code Beacon Remote Tracing Configuration'));
   });
 }); 

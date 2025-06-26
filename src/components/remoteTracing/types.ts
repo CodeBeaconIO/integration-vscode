@@ -15,6 +15,7 @@ export interface TracerConfig {
 export interface TracerFilters {
   include_paths?: string[];
   exclude_patterns?: string[];
+  recording_meta_exclude?: MetaExcludeRule[];
 }
 
 /**
@@ -24,14 +25,20 @@ export const DEFAULT_TRACER_CONFIG: TracerConfig = {
   tracing_enabled: false,
   last_updated: new Date().toISOString(),
   source: 'vscode-extension',
-  version: '1.0',
+  version: '1.1',
   filters: {
     include_paths: ['app/', 'lib/'],
-    exclude_patterns: ['*_spec.rb', '*_test.rb']
+    exclude_patterns: ['*_spec.rb', '*_test.rb'],
+    recording_meta_exclude: []
   }
 };
 
 /**
  * Configuration file name
  */
-export const TRACER_CONFIG_FILENAME = 'tracer_config.yml'; 
+export const TRACER_CONFIG_FILENAME = 'tracer_config.yml';
+
+export interface MetaExcludeRule {
+  name: string;
+  description: string;
+} 
