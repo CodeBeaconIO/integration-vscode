@@ -7,8 +7,8 @@ export class CurrentState {
   private static _currentNode: TreeNodeDataAR | null = null;
   private static _currentDbUri: vscode.Uri | null = null;
 
-  constructor() {
-    newDbInstanceEventEmitter.event(({uri}) => {  
+  static {
+    newDbInstanceEventEmitter.event(({ uri }) => {
       CurrentState._currentDbUri = uri;
     });
   }
