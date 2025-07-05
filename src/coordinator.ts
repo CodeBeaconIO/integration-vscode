@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { RecordingsTreeProvider } from './components/recordings/recordingsViewProvider';
-import { fileVisibilityEventEmitter, documentVisibilityChangedEventEmitter, fileSelectionEventEmitter, nodeSelectionEventEmitter, editorSelectionEventEmitter, reloadEventEmitter } from './eventEmitter';
+import { fileVisibilityEventEmitter, documentVisibilityChangedEventEmitter, fileSelectionEventEmitter, nodeSelectionEventEmitter, editorSelectionEventEmitter, reloadEventEmitter, recordingDeletedEventEmitter } from './eventEmitter';
 import { TreeNodeDataAR } from './state/activeRecord/treeNodeDataAR';
 import { DocumentManager } from './components/editor/documentManager';
 import { DocumentEvents } from './components/editor/documentEvents';
@@ -20,6 +20,10 @@ export class Coordinator {
     new DocumentEvents();
     reloadEventEmitter.event(() => {
       TreeNodeDataAR.reconnectDb();
+    });
+    recordingDeletedEventEmitter.event(() => {
+      // Clear any decorations and reset state when a recording is deleted
+      this.documentManager.redecorateVisibleEditors();
     });
     this.registerCommandHandlers();
     this.registerEventHandlers();

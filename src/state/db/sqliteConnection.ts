@@ -22,7 +22,7 @@ export class MissingDbError extends Error {
  */
 export class SQLiteConnection {
   private dbPath: string;
-  private static instance: SQLiteConnection;
+  private static instance: SQLiteConnection | undefined;
   private executor: SQLiteExecutor;
 
   /**
@@ -76,7 +76,26 @@ export class SQLiteConnection {
    * Reconnect to the database (closes current connection and opens a new one)
    */
   public static reconnect(): void {
-    SQLiteConnection.instance = new SQLiteConnection(SQLiteConnection.instance.dbPath);
+    if (SQLiteConnection.instance) {
+      SQLiteConnection.instance = new SQLiteConnection(SQLiteConnection.instance.dbPath);
+    }
+  }
+
+  /**
+   * Disconnect and clear the current instance
+   */
+  public static disconnect(): void {
+    if (SQLiteConnection.instance) {
+      SQLiteConnection.instance.executor.close();
+      SQLiteConnection.instance = undefined;
+    }
+  }
+
+  /**
+   * Clear the current instance without closing executor (for cases where file is already deleted)
+   */
+  public static clearInstance(): void {
+    SQLiteConnection.instance = undefined;
   }
 
   /**

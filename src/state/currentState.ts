@@ -1,7 +1,7 @@
 import { TreeNodeDataAR } from './activeRecord/treeNodeDataAR';
 import { TracedFile } from '../components/editor/tracedFile';
 import * as vscode from 'vscode';
-import { newDbInstanceEventEmitter } from '../eventEmitter';
+import { newDbInstanceEventEmitter, recordingDeletedEventEmitter } from '../eventEmitter';
 
 export class CurrentState {
   private static _currentNode: TreeNodeDataAR | null = null;
@@ -10,6 +10,13 @@ export class CurrentState {
   static {
     newDbInstanceEventEmitter.event(({ uri }) => {
       CurrentState._currentDbUri = uri;
+    });
+
+    recordingDeletedEventEmitter.event(({ uri }) => {
+      // Clear current state if the deleted recording was the active one
+      if (CurrentState._currentDbUri && CurrentState._currentDbUri.fsPath === uri.fsPath) {
+        CurrentState.clearCurrentState();
+      }
     });
   }
 
@@ -44,5 +51,10 @@ export class CurrentState {
 
   static currentDbUri(): vscode.Uri | null {
     return this._currentDbUri;
+  }
+
+  static clearCurrentState(): void {
+    this._currentNode = null;
+    this._currentDbUri = null;
   }
 }

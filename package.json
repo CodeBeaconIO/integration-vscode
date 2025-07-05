@@ -115,6 +115,12 @@
         "title": "Exclude Recording Like This",
         "category": "Code Beacon",
         "icon": "$(circle-slash)"
+      },
+      {
+        "command": "codeBeacon.deleteRecording",
+        "title": "Delete Recording",
+        "category": "Code Beacon",
+        "icon": "$(trash)"
       }
     ],
     "viewsContainers": {
@@ -214,6 +220,11 @@
         }
       ],
       "view/item/context": [
+        {
+          "command": "codeBeacon.deleteRecording",
+          "when": "view == recordingsTree && viewItem == recording",
+          "group": "inline@1"
+        },
         {
           "command": "codeBeacon.excludeRecordingLikeThis",
           "when": "view == recordingsTree && viewItem == recording",

@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
-import { newDbEventEmitter, newDbInstanceEventEmitter, reloadEventEmitter } from '../../eventEmitter';
+import { newDbEventEmitter, newDbInstanceEventEmitter, reloadEventEmitter, recordingDeletedEventEmitter } from '../../eventEmitter';
 import { SQLiteConnection } from './sqliteConnection';
 import { TreeNodeDataAR } from '../activeRecord/treeNodeDataAR';
 import { NodeSourceAR } from '../activeRecord/nodeSourceAR';
+import { DeleteRecordingHandler } from '../../components/recordings/deleteRecordingHandler';
 
 export class DBManager {
   private _refreshWatcher: vscode.FileSystemWatcher;
@@ -18,7 +19,7 @@ export class DBManager {
       pattern,
       false, // [Don't] ignore create events
       false, // [Don't] ignore change events
-      true   // Do ignore delete events
+      false  // [Don't] ignore delete events - now we want to handle them
     );
   }
 
@@ -31,6 +32,10 @@ export class DBManager {
       SQLiteConnection.connect(dbFileName); 
       newDbInstanceEventEmitter.fire({uri: vscode.Uri.file(dbFileName)});
     });
+
+    vscode.commands.registerCommand('codeBeacon.deleteRecording', (dbNode) => {
+      DeleteRecordingHandler.deleteRecording(dbNode);
+    });
   }
 
   public startWatching(): void {
@@ -38,6 +43,9 @@ export class DBManager {
     this.onUpdate((uri: vscode.Uri) => {
 			newDbEventEmitter.fire({uri: uri});
 		});
+    this.onDelete((uri: vscode.Uri) => {
+      recordingDeletedEventEmitter.fire({uri: uri});
+    });
   }
 
   public stopWatching(): void {
@@ -49,6 +57,12 @@ export class DBManager {
       callback(uri);
     });
     this._refreshWatcher.onDidCreate((uri) => {
+      callback(uri);
+    });
+  }
+
+  private onDelete(callback: (uri: vscode.Uri) => void): void {
+    this._refreshWatcher.onDidDelete((uri) => {
       callback(uri);
     });
   }
