@@ -11,12 +11,20 @@ export class RecordingsTreeProvider implements vscode.TreeDataProvider<DbNode> {
   readonly onDidChangeTreeData: vscode.Event<DbNode | undefined | null | void> = this._onDidChangeTreeData.event;
 
   private config: Config;
+  private static autoIncrementCounter = 0;
 
   constructor() {
     this.config = createConfig();
     newDbEventEmitter.event(() => {
       this.refresh();
     });
+  }
+
+  /**
+   * Reset the auto-increment counter (mainly for testing purposes)
+   */
+  public static resetAutoIncrementCounter(): void {
+    RecordingsTreeProvider.autoIncrementCounter = 0;
   }
 
   getTreeItem(dbNode: DbNode): Thenable<vscode.TreeItem> {
@@ -26,8 +34,45 @@ export class RecordingsTreeProvider implements vscode.TreeDataProvider<DbNode> {
     const metaData = new MetaDataAR(dbPath);
     return metaData.findById(1).then((row) => {
       executor.close();
-      dbNode.setName(row.name);
-      dbNode.setDescription(row.description);
+      
+      // Check if name is empty or not provided, generate fallback name
+      let displayName: string;
+      let displayDescription: string | undefined;
+      
+      if (row.name && row.name.trim() !== '') {
+        // Use provided name
+        displayName = row.name;
+        displayDescription = row.description;
+      } else if (row.caller_method && row.caller_method.trim() !== '') {
+        // Use caller_method as fallback name
+        displayName = row.caller_method;
+        if (row.description && row.description.trim() !== '') {
+          displayDescription = row.description;
+        } else {
+          // Generate description from caller_file and caller_line (use filename only)
+          const filename = path.basename(row.caller_file);
+          displayDescription = `${filename}:${row.caller_line}`;
+        }
+      } else if (row.caller_file && row.caller_file.trim() !== '') {
+        // Use caller_file as fallback name (extract filename)
+        displayName = path.basename(row.caller_file);
+        displayDescription = row.description;
+      } else {
+        // Last resort: auto-increment counter
+        displayName = `Trace-${++RecordingsTreeProvider.autoIncrementCounter}`;
+        displayDescription = row.description;
+      }
+      
+      dbNode.setName(displayName);
+      
+      // Set description if it exists
+      if (displayDescription) {
+        dbNode.setDescription(displayDescription);
+      }
+      
+      // Set the full metadata for rich tooltip
+      dbNode.setMetadata(row);
+      
       dbNode.setFileName(row.dbBasename);
       return dbNode;
     }).catch(() => {

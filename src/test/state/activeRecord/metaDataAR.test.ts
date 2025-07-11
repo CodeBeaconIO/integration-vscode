@@ -38,18 +38,34 @@ suite('MetaDataAR Test Suite', function() {
         return {
             id: '1',
             name: 'Test Profile',
-            description: 'Test Description'
+            description: 'Test Description',
+            caller_file: 'app/test.rb',
+            caller_method: 'test_method',
+            caller_line: '10',
+            caller_class: 'TestClass',
+            start_time: '2024-01-01 12:00:00',
+            end_time: '2024-01-01 12:00:05',
+            duration_ms: '5000',
+            trigger_type: 'manual_block'
         };
     };
 
     async function insertTestData(data: Partial<MetaDataARInterface>): Promise<void> {
         await testExecutor.run(`
-            INSERT OR REPLACE INTO metadata (id, name, description)
-            VALUES (?, ?, ?)
+            INSERT OR REPLACE INTO metadata (id, name, description, caller_file, caller_method, caller_line, caller_class, start_time, end_time, duration_ms, trigger_type)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
             data.id ?? '',
             data.name ?? '',
-            data.description ?? ''
+            data.description ?? '',
+            data.caller_file ?? '',
+            data.caller_method ?? '',
+            data.caller_line ?? '',
+            data.caller_class ?? '',
+            data.start_time ?? '',
+            data.end_time ?? '',
+            data.duration_ms ?? '',
+            data.trigger_type ?? ''
         ]);
     }
 
@@ -75,7 +91,15 @@ suite('MetaDataAR Test Suite', function() {
             CREATE TABLE IF NOT EXISTS metadata (
                 id TEXT PRIMARY KEY,
                 name TEXT,
-                description TEXT
+                description TEXT,
+                caller_file TEXT,
+                caller_method TEXT,
+                caller_line TEXT,
+                caller_class TEXT,
+                start_time TEXT,
+                end_time TEXT,
+                duration_ms TEXT,
+                trigger_type TEXT
             )
         `);
     });
@@ -105,6 +129,14 @@ suite('MetaDataAR Test Suite', function() {
         assert.strictEqual(result.id, mockData.id);
         assert.strictEqual(result.name, mockData.name);
         assert.strictEqual(result.description, mockData.description);
+        assert.strictEqual(result.caller_file, mockData.caller_file);
+        assert.strictEqual(result.caller_method, mockData.caller_method);
+        assert.strictEqual(result.caller_line, mockData.caller_line);
+        assert.strictEqual(result.caller_class, mockData.caller_class);
+        assert.strictEqual(result.start_time, mockData.start_time);
+        assert.strictEqual(result.end_time, mockData.end_time);
+        assert.strictEqual(result.duration_ms, mockData.duration_ms);
+        assert.strictEqual(result.trigger_type, mockData.trigger_type);
         assert.strictEqual(result.dbPath, testDbPath);
         assert.strictEqual(result.dbBasename, path.basename(testDbPath));
     });

@@ -6,6 +6,14 @@ export interface MetaDataARInterface {
   id: string,
   name: string,
   description: string,
+  caller_file: string,
+  caller_method: string,
+  caller_line: string,
+  caller_class: string,
+  start_time: string,
+  end_time: string,
+  duration_ms: string,
+  trigger_type: string,
   dbPath: string,
   dbBasename: string
 }
@@ -26,6 +34,14 @@ export class MetaDataAR {
       id: '',
       name: '',
       description: '',
+      caller_file: '',
+      caller_method: '',
+      caller_line: '',
+      caller_class: '',
+      start_time: '',
+      end_time: '',
+      duration_ms: '',
+      trigger_type: '',
       dbPath: this.dbPath,
       dbBasename: this._dbBasename
     };
@@ -54,6 +70,38 @@ export class MetaDataAR {
 
   public get description(): string {
     return this._row.description;
+  }
+
+  public get callerFile(): string {
+    return this._row.caller_file;
+  }
+
+  public get callerMethod(): string {
+    return this._row.caller_method;
+  }
+
+  public get callerLine(): string {
+    return this._row.caller_line;
+  }
+
+  public get callerClass(): string {
+    return this._row.caller_class;
+  }
+
+  public get startTime(): string {
+    return this._row.start_time;
+  }
+
+  public get endTime(): string {
+    return this._row.end_time;
+  }
+
+  public get durationMs(): string {
+    return this._row.duration_ms;
+  }
+
+  public get triggerType(): string {
+    return this._row.trigger_type;
   }
 
   public get dbBasename(): string {
