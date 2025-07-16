@@ -4,7 +4,7 @@
   "publisher": "BitFiddle",
   "description": "Reveals the execution path of Ruby code runs, helping you understand how your code flows.",
   "version": "0.2.2",
-  "license": "MIT",
+  "license": "UNLICENSED",
   "engines": {
     "vscode": "^1.85.0"
   },
