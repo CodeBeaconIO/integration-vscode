@@ -4,6 +4,27 @@ All notable changes to the "Code Beacon" extension will be documented in this fi
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [0.3.0] - 2025-01-26
+
+### Added
+- Rich metadata tooltips and improved recording display
+- Delete recordings functionality - allows users to remove unwanted recordings  
+- Recording metadata exclude filters for better data management
+- Status bar indicating active tracing state
+- Complete remote tracing state management and file watching (Phase 3)
+- WorkspaceSetupService with multi-workspace support
+- Protection for DEFAULT_TRACER_CONFIG from accidental mutation
+
+### Changed
+- **License changed from MIT to UNLICENSED** ⚠️
+- Improved robustness when no recording database is selected
+
+### Fixed
+- File/method loading on file explorer selection
+- Handling of missing data directory on initial load
+- Reduced unwanted scrolling behavior
+- Extension initialization when data directory doesn't exist
+
 ## [0.2.2] - 2025-05-07
 
 ### Noop
